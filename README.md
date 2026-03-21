@@ -219,6 +219,7 @@ vision:
     model: "llava:13b"
 ```
 
+**Supported providers:**
 <br/>
 <div align="center">
   <img src="https://img.shields.io/badge/OpenAI-74aa9c?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI" />
