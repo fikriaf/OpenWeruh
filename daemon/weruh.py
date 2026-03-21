@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import yaml
+import getpass
 from capture import ScreenCapturer
 from trigger import trigger_agent_with_image, trigger_agent_with_text
 from vision import VisionProviderAdapter
@@ -27,13 +28,130 @@ def load_config():
         return yaml.safe_load(f)
 
 
+def get_choice(prompt, choices):
+    print(prompt)
+    for i, choice in enumerate(choices, 1):
+        print(f"  {i}) {choice}")
+    while True:
+        try:
+            val = int(input(f"\nSelect an option (1-{len(choices)}): "))
+            if 1 <= val <= len(choices):
+                return val - 1
+            print("Invalid choice. Try again.")
+        except ValueError:
+            print("Please enter a number.")
+        except KeyboardInterrupt:
+            print("\nSetup cancelled.")
+            sys.exit(1)
+
+
 def run_setup():
-    print("OpenWeruh Setup")
+    print("\nOpenWeruh Setup")
     print("───────────────")
-    # A real setup would be interactive using rich/prompt_toolkit.
-    # We will provide a stub here.
-    print("Interactive setup is not fully implemented in this script version.")
-    print("Please edit ~/.config/openweruh/weruh.yaml manually.")
+
+    try:
+        # 1. Gateway Location
+        gw_idx = get_choice(
+            "? Where is your OpenClaw Gateway running?",
+            [
+                "On this same machine (local)",
+                "On a remote server (SSH tunnel)",
+                "On a remote server (public URL / Tailscale)",
+            ],
+        )
+
+        mode = ["local", "tunnel", "remote"][gw_idx]
+
+        default_url = "http://127.0.0.1:18789" if mode != "remote" else "https://"
+        url = input(f"? Gateway URL [{default_url}]: ").strip() or default_url
+
+        token = getpass.getpass("? Hook token (from openclaw.json → hooks.token): ")
+
+        config = {
+            "gateway": {"mode": mode, "url": url, "hook_token": token},
+            "persona": {
+                "mode": "skeptic",
+                "language": "en",
+                "tone": "casual",
+                "intervention_threshold": "medium",
+            },
+            "capture": {
+                "interval_seconds": 15,
+                "change_threshold": 10,
+                "active_hours": "07:00-23:00",
+                "notify_after_idle_minutes": 5,
+            },
+        }
+
+        # 2. Vision Provider
+        print()
+        vision_idx = get_choice(
+            "? Has your OpenClaw already been configured with a vision-capable imageModel?",
+            [
+                "Yes — I have already set an imageModel (primary path is sufficient)",
+                "Not sure — add a fallback vision provider",
+            ],
+        )
+
+        if vision_idx == 1:
+            print()
+            providers = [
+                ("ollama", "Ollama (local, full privacy)"),
+                ("openai", "OpenAI (GPT-4o / GPT-4.1)"),
+                ("anthropic", "Anthropic (Claude Sonnet / Haiku)"),
+                ("google", "Google (Gemini Flash / Pro)"),
+                ("openrouter", "OpenRouter (access 200+ models via one API)"),
+                ("mistral", "Mistral (Pixtral)"),
+                ("together", "Together AI (Llama Vision)"),
+                ("xai", "xAI (Grok Vision)"),
+                (
+                    "custom",
+                    "Custom / Self-hosted (LiteLLM, vLLM, LMStudio, Azure, etc.)",
+                ),
+            ]
+            p_idx = get_choice("? Choose a vision provider:", [p[1] for p in providers])
+            provider_type = providers[p_idx][0]
+
+            api_key = ""
+            if provider_type not in ["ollama"]:
+                api_key = getpass.getpass(f"? {provider_type.capitalize()} API Key: ")
+
+            model = input("? Model name (e.g., gpt-4o, llava:13b): ").strip()
+            override_url = input("? Override URL? (leave empty for default): ").strip()
+
+            config["vision"] = {
+                "provider": {
+                    "type": provider_type,
+                    "api_key": api_key,
+                    "model": model,
+                    "url": override_url,
+                }
+            }
+            print(f"\n✓ {provider_type.capitalize()} provider configured as fallback")
+        else:
+            print("\n✓ Skipping fallback vision provider configuration")
+
+        # Save to ~/.config/openweruh/weruh.yaml
+        config_dir = os.path.expanduser("~/.config/openweruh")
+        os.makedirs(config_dir, exist_ok=True)
+        config_path = os.path.join(config_dir, "weruh.yaml")
+
+        with open(config_path, "w") as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+        # Try to set permissions securely (Unix only)
+        try:
+            os.chmod(config_path, 0o600)
+        except OSError:
+            pass
+
+        print(f"\n✓ Configuration saved securely to {config_path}")
+        print("✓ OpenWeruh is ready. Run: python daemon/weruh.py start\n")
+
+    except KeyboardInterrupt:
+        print("\nSetup cancelled.")
+        sys.exit(1)
+
     sys.exit(0)
 
 

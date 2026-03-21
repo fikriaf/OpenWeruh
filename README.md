@@ -29,6 +29,7 @@
         <li><a href="#overview">Overview</a></li>
         <li><a href="#the-problem-it-solves">The Problem</a></li>
         <li><a href="#system-architecture">Architecture</a></li>
+        <li><a href="#how-it-works-workflow">Workflow</a></li>
       </ul>
       <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="300" height="0" alt="" />
     </td>
@@ -43,15 +44,15 @@
     <td width="25%" valign="top">
       <ul>
         <li><a href="#installation-guide-remote-server--vps">Install Guide</a></li>
-        <li><a href="#configuration">Configuration</a></li>
         <li><a href="#vision-provider-fallback">Vision Fallback</a></li>
+        <li><a href="#security--privacy">Security & Privacy</a></li>
       </ul>
       <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="300" height="0" alt="" />
     </td>
     <td width="25%" valign="top">
       <ul>
-        <li><a href="#security--privacy">Security & Privacy</a></li>
         <li><a href="#roadmap">Roadmap</a></li>
+        <li><a href="#author">Author</a></li>
         <li><a href="#license">License</a></li>
       </ul>
       <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="300" height="0" alt="" />
@@ -73,9 +74,10 @@ For an in-depth understanding of the design philosophy, refer to the [Whitepaper
 
 ## The Problem It Solves
 
-1.  **Blind Agents**: Standard AI agents can read files and APIs, but they cannot see what you are currently doing on your screen.
-2.  **Reactive vs. Proactive**: Most "screen capture" skills require you to explicitly type *"take a screenshot"*. This is reactive. OpenWeruh runs in the background and speaks up only when necessary.
-3.  **OS Permissions**: Running headless daemons that need screen capture permissions (especially on macOS) is highly problematic. OpenWeruh separates the capture daemon from the main OpenClaw Gateway to solve this natively.
+1.  **Blind Agents**: Standard AI agents can read files, calendars, and APIs, but they cannot see what you are currently working on. If you are reading an article with a false claim, the agent doesn't know.
+2.  **Time-Based vs. Context-Based**: OpenClaw's proactivity relies heavily on time-based heartbeats (e.g., every 30 minutes). This is powerful but blind to crucial moments between intervals.
+3.  **Reactive Screen Capture**: Existing screen-monitor skills require you to explicitly type *"take a screenshot"*. This is still reactive behavior wrapped in a new interface.
+4.  **OS Permissions**: Running headless daemons that need screen capture permissions (especially on macOS) is fundamentally broken. OpenWeruh natively solves this by decoupling the capture daemon from the main OpenClaw Gateway.
 
 ---
 
@@ -88,10 +90,28 @@ For an in-depth understanding of the design philosophy, refer to the [Whitepaper
 
 OpenWeruh consists of four decoupled components:
 
+```text
+openweruh/
+├── daemon/    ← Python Screen Daemon (mss + imagehash)
+├── skill/     ← OpenClaw AgentSkills instructions (SKILL.md)
+├── hook/      ← TypeScript hook to inject tool (gateway:startup)
+└── config/    ← Settings for persona, threshold, and active hours
+```
+
 1.  **Python Screen Daemon (`daemon/`)**: Captures the screen, applies perceptual hashing (`pHash`) to detect meaningful changes, and securely dispatches the data via Webhooks.
 2.  **OpenClaw Skill (`skill/`)**: Instructs the OpenClaw agent on how to react to screen context payloads using defined "Persona Modes."
 3.  **Startup Hook (`hook/`)**: Injects the `screen.context` capability into the agent's awareness during the `gateway:startup` event.
 4.  **Configuration (`config/`)**: A dedicated `weruh.yaml` file to control sensitivity, active hours, and vision fallbacks.
+
+---
+
+## How It Works (Workflow)
+
+1. **Capture**: Every 15 seconds (configurable), the local Python daemon takes a native screenshot using `mss`.
+2. **Change Detection**: It applies perceptual hashing (`pHash`) via `imagehash`. If the screen hasn't changed meaningfully (delta < threshold), the frame is dropped to save API costs.
+3. **Dispatch**: If a significant change is detected, the daemon securely POSTs the image to your OpenClaw Gateway's `/hooks/agent` webhook using the `hook:weruh:screen` session.
+4. **Analysis & Persona**: OpenClaw processes the image and loads the `openweruh` skill. The agent assumes the configured persona (e.g., `skeptic`, `guardian`) and decides whether an intervention is warranted.
+5. **Notification**: If the agent decides to intervene, it sends a proactive message to your active channel (WhatsApp, Telegram, etc.).
 
 ---
 
@@ -114,6 +134,24 @@ OpenWeruh's value lies in its intelligent filtering. The agent adopts a specific
 | **`focus`** | Monitors activity against a declared session goal. Intervenes if you deviate (e.g., browsing social media while coding). |
 | **`guardian`** | Tracks idle time or prolonged usage of distracting applications, gently reminding you to take breaks. |
 | **`silent`** | Background recording only. No proactive notifications. Ideal for generating end-of-day activity summaries. |
+
+### Persona Configuration (`weruh.yaml`)
+
+You can fine-tune the agent's behavior, language, and sensitivity in your configuration file:
+
+```yaml
+persona:
+  mode: "skeptic"                   # skeptic | researcher | focus | guardian | silent
+  language: "en"                    # notification language (e.g., en, id)
+  tone: "casual"                    # casual | formal
+  intervention_threshold: "medium"  # low | medium | high
+
+capture:
+  interval_seconds: 15              # time between screenshots
+  change_threshold: 10              # pHash distance required to trigger agent
+  active_hours: "07:00-23:00"       # prevent capturing during personal time
+  notify_after_idle_minutes: 5      # wait for screen to settle before analyzing
+```
 
 ---
 
@@ -260,6 +298,27 @@ Configuration is automatically saved to `~/.config/openweruh/weruh.yaml` with st
 
 ```bash
 python daemon/weruh.py start
+```
+
+### Step 5: Optional OpenClaw Integrations
+
+**Daily Summary Cron**  
+If you use the `silent` mode or want a recap of your day, you can configure OpenClaw to send you an evening summary of your screen context using its built-in cron system:
+
+```bash
+openclaw cron add \
+  --name "weruh-daily-summary" \
+  --cron "0 21 * * *" \
+  --session isolated \
+  --message "Summarize today's screen context observations from the weruh session." \
+  --announce \
+  --channel last
+```
+
+**System Event Fallback**  
+If webhooks are unavailable, OpenWeruh can fall back to injecting context via the OpenClaw CLI system event:
+```bash
+openclaw system event --text "[WERUH] Screen context: user is reading about X" --mode now
 ```
 
 ---
