@@ -204,6 +204,16 @@ Data never leaves your machine without explicit permission.
 
 ---
 
+## Author
+
+**Fikri Armia Fahmi (FikriAF)**
+
+*   **Email**: [fikriarmia27@gmail.com](mailto:fikriarmia27@gmail.com)
+*   **LinkedIn**: [Fikri Armia Fahmi](https://www.linkedin.com/in/fikri-armia-fahmi-b373b3288/)
+*   **Website**: [faftech.net](https://faftech.net)
+
+---
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
