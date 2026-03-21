@@ -22,9 +22,9 @@
 
 ## Table of Contents
 
-<table>
+<table width="100%">
   <tr>
-    <td valign="top">
+    <td width="33%" valign="top">
       <ul>
         <li><a href="#overview">Overview</a></li>
         <li><a href="#the-problem-it-solves">The Problem</a></li>
@@ -32,7 +32,7 @@
         <li><a href="#core-features">Features</a></li>
       </ul>
     </td>
-    <td valign="top">
+    <td width="33%" valign="top">
       <ul>
         <li><a href="#persona-modes">Persona Modes</a></li>
         <li><a href="#deployment-topologies">Deployments</a></li>
@@ -40,7 +40,7 @@
         <li><a href="#configuration">Configuration</a></li>
       </ul>
     </td>
-    <td valign="top">
+    <td width="34%" valign="top">
       <ul>
         <li><a href="#vision-provider-fallback">Vision Fallback</a></li>
         <li><a href="#security--privacy">Security & Privacy</a></li>
