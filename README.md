@@ -219,7 +219,19 @@ vision:
     model: "llava:13b"
 ```
 
-*Supported providers: `openai`, `anthropic`, `google`, `ollama`, `openrouter`, `mistral`, `together`, `xai`, `custom`.*
+<br/>
+<div align="center">
+  <img src="https://img.shields.io/badge/OpenAI-74aa9c?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI" />
+  <img src="https://img.shields.io/badge/Anthropic-cc9c84?style=for-the-badge&logo=anthropic&logoColor=black" alt="Anthropic" />
+  <img src="https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Google Gemini" />
+  <img src="https://img.shields.io/badge/Ollama-FFFFFF?style=for-the-badge&logo=ollama&logoColor=black" alt="Ollama" />
+  <br/>
+  <img src="https://img.shields.io/badge/Mistral_AI-F2A900?style=for-the-badge" alt="Mistral AI" />
+  <img src="https://img.shields.io/badge/OpenRouter-1A1A1A?style=for-the-badge" alt="OpenRouter" />
+  <img src="https://img.shields.io/badge/Together_AI-222222?style=for-the-badge" alt="Together AI" />
+  <img src="https://img.shields.io/badge/xAI-000000?style=for-the-badge&logo=x&logoColor=white" alt="xAI" />
+  <img src="https://img.shields.io/badge/Custom_Proxy-444444?style=for-the-badge" alt="Custom" />
+</div>
 
 ---
 
