@@ -196,23 +196,65 @@ cd OpenWeruh
 
 ### Step 3: Configure the Daemon
 
-Edit the generated configuration file located at `~/.config/openweruh/weruh.yaml`.
+OpenWeruh provides an interactive setup script to easily configure your environment, test connections, and safely store your API keys:
 
-```yaml
-gateway:
-  mode: "remote"
-  url: "https://your-openclaw-endpoint.com"  # e.g., https://claw.yourdomain.com
-  hook_token: "YOUR_SECURE_TOKEN"
-
-capture:
-  interval_seconds: 15
-  change_threshold: 10
-  active_hours: "07:00-23:00"
-
-persona:
-  mode: "guardian"
-  language: "en"
+```bash
+python daemon/weruh.py setup
 ```
+
+**Interactive Setup Example:**
+```text
+OpenWeruh Setup
+───────────────
+? Where is your OpenClaw Gateway running?
+  ❯ On this same machine (local)
+    On a remote server (SSH tunnel)
+    On a remote server (public URL / Tailscale)
+
+? Gateway URL: http://127.0.0.1:18789
+? Hook token (from openclaw.json → hooks.token): ****
+
+? Has your OpenClaw already been configured with a vision-capable imageModel?
+  ❯ Yes — I have already set an imageModel (primary path is sufficient)
+    Not sure — add a fallback vision provider
+
+[If fallback selected:]
+
+? Choose a vision provider:
+  ❯ Ollama (local, full privacy)
+    OpenAI (GPT-4o / GPT-4.1)
+    Anthropic (Claude Sonnet / Haiku)
+    Google (Gemini Flash / Pro)
+    OpenRouter (access 200+ models via one API)
+    Mistral (Pixtral)
+    Together AI (Llama Vision)
+    xAI (Grok Vision)
+    Custom / Self-hosted (LiteLLM, vLLM, LMStudio, Azure, etc.)
+
+[Example — Anthropic selected:]
+
+? Anthropic API Key: sk-ant-****
+? Model [claude-sonnet-4-6]:
+? Override URL? (leave empty for default https://api.anthropic.com):
+
+✓ Connection to Anthropic... success (claude-sonnet-4-6 supports vision)
+✓ Vision provider configured as fallback
+
+[Example — Custom selected:]
+
+? Provider URL: http://192.168.1.50:11434/api/chat
+? API Key (leave empty if not required):
+? Model name: llava:13b
+? API format:
+  ❯ OpenAI-compatible
+    Anthropic-compatible
+    Google Gemini-compatible
+
+✓ Connection test... success
+✓ Custom provider configured as fallback
+```
+
+Configuration is automatically saved to `~/.config/openweruh/weruh.yaml` with strict permission `600`. API keys are masked when displayed in the CLI. *(Alternatively, you can still edit the YAML file manually if you prefer).*
 
 ### Step 4: Run the Daemon
 
