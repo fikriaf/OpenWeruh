@@ -58,7 +58,7 @@ For an in-depth understanding of the design philosophy, refer to the [Whitepaper
 ## System Architecture
 
 <div align="center">
-  <img src="assets/openweruh_flowchart.svg" alt="OpenWeruh Architecture Flowchart" width="800" />
+  <img src="assets/openweruh_flowchart.svg" alt="OpenWeruh Architecture Flowchart" width="400" />
 </div>
 <br/>
 
