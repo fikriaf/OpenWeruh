@@ -115,20 +115,52 @@ openclaw restart
 
 ### Step 2: Local Installation (Workstation)
 
-On the laptop/PC whose screen you wish to monitor, clone this repository and install the dependencies:
+On the laptop/PC whose screen you wish to monitor, clone this repository first:
 
 ```bash
 git clone https://github.com/fikriaf/OpenWeruh.git
 cd OpenWeruh
-
-# Make scripts executable (Linux/macOS)
-chmod +x scripts/*.sh
-
-# Run the installer
-./scripts/install.sh
 ```
 
-*Note for Windows users: Simply run `pip install -r daemon/requirements.txt`, then manually copy `config/weruh.example.yaml` to `C:\Users\YourUser\.config\openweruh\weruh.yaml`.*
+#### Windows
+
+1. Install Python dependencies:
+   ```cmd
+   pip install -r daemon\requirements.txt
+   ```
+2. Create the configuration directory and copy the template:
+   ```cmd
+   mkdir "%USERPROFILE%\.config\openweruh"
+   copy config\weruh.example.yaml "%USERPROFILE%\.config\openweruh\weruh.yaml"
+   ```
+3. Copy the OpenClaw skill and hook manually to your OpenClaw directories:
+   ```cmd
+   xcopy /E /I skill\openweruh "%USERPROFILE%\.openclaw\skills\openweruh"
+   xcopy /E /I hook\weruh-boot "%USERPROFILE%\.openclaw\hooks\weruh-boot"
+   ```
+
+#### Linux
+
+1. Make the installation script executable:
+   ```bash
+   chmod +x scripts/*.sh
+   ```
+2. Run the installer script, which automatically handles dependencies and copies configuration files:
+   ```bash
+   ./scripts/install.sh
+   ```
+
+#### macOS
+
+1. Make the installation script executable:
+   ```bash
+   chmod +x scripts/*.sh
+   ```
+2. Run the installer script:
+   ```bash
+   ./scripts/install.sh
+   ```
+*Note for macOS: You must explicitly grant "Screen Recording" permissions to your Terminal application (or the Python process running the daemon) in `System Settings > Privacy & Security > Screen Recording`.*
 
 ### Step 3: Configure the Daemon
 
