@@ -30,6 +30,7 @@
         <li><a href="#the-problem-it-solves">The Problem</a></li>
         <li><a href="#system-architecture">Architecture</a></li>
       </ul>
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="300" height="0" alt="" />
     </td>
     <td width="25%" valign="top">
       <ul>
@@ -37,6 +38,7 @@
         <li><a href="#persona-modes">Persona Modes</a></li>
         <li><a href="#deployment-topologies">Deployments</a></li>
       </ul>
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="300" height="0" alt="" />
     </td>
     <td width="25%" valign="top">
       <ul>
@@ -44,6 +46,7 @@
         <li><a href="#configuration">Configuration</a></li>
         <li><a href="#vision-provider-fallback">Vision Fallback</a></li>
       </ul>
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="300" height="0" alt="" />
     </td>
     <td width="25%" valign="top">
       <ul>
@@ -51,6 +54,7 @@
         <li><a href="#roadmap">Roadmap</a></li>
         <li><a href="#license">License</a></li>
       </ul>
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="300" height="0" alt="" />
     </td>
   </tr>
 </table>
