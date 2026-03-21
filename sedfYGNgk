@@ -22,38 +22,18 @@
 
 ## Table of Contents
 
-<table width="100%">
-  <tr>
-    <td width="25%" valign="top">
-      <ul>
-        <li><a href="#overview">Overview</a></li>
-        <li><a href="#the-problem-it-solves">The Problem</a></li>
-        <li><a href="#system-architecture">Architecture</a></li>
-      </ul>
-    </td>
-    <td width="25%" valign="top">
-      <ul>
-        <li><a href="#core-features">Features</a></li>
-        <li><a href="#persona-modes">Persona Modes</a></li>
-        <li><a href="#deployment-topologies">Deployments</a></li>
-      </ul>
-    </td>
-    <td width="25%" valign="top">
-      <ul>
-        <li><a href="#installation-guide-remote-server--vps">Install Guide</a></li>
-        <li><a href="#configuration">Configuration</a></li>
-        <li><a href="#vision-provider-fallback">Vision Fallback</a></li>
-      </ul>
-    </td>
-    <td width="25%" valign="top">
-      <ul>
-        <li><a href="#security--privacy">Security & Privacy</a></li>
-        <li><a href="#roadmap">Roadmap</a></li>
-        <li><a href="#license">License</a></li>
-      </ul>
-    </td>
-  </tr>
-</table>
+- [Overview](#overview)
+- [The Problem It Solves](#the-problem-it-solves)
+- [System Architecture](#system-architecture)
+- [Core Features](#core-features)
+- [Persona Modes](#persona-modes)
+- [Deployment Topologies](#deployment-topologies)
+- [Installation Guide (Remote Server / VPS)](#installation-guide-remote-server--vps)
+- [Configuration](#configuration)
+- [Vision Provider Fallback](#vision-provider-fallback)
+- [Security & Privacy](#security--privacy)
+- [Roadmap](#roadmap)
+- [License](#license)
 
 ---
 
@@ -118,8 +98,8 @@ OpenWeruh's value lies in its intelligent filtering. The agent adopts a specific
 OpenWeruh supports three deployment architectures:
 
 1.  **Mode A (Local)**: OpenClaw Gateway and the OpenWeruh daemon run on the exact same local machine.
-2.  **Mode B (SSH Tunnel)**: OpenClaw runs on a remote VPS, but is bound to `loopback`. You use an SSH tunnel ([`autossh`](https://www.harding.motd.ca/autossh/)) to securely link the local daemon to the server. *(Recommended for high privacy)*.
-3.  **Mode C (Remote Public URL)**: OpenClaw runs on a remote server accessible via [Tailscale](https://tailscale.com), [Localtonet](https://localtonet.com), or a standard Reverse Proxy ([Nginx](https://nginx.org) / [Caddy](https://caddyserver.com)). The daemon transmits via HTTPS.
+2.  **Mode B (SSH Tunnel)**: OpenClaw runs on a remote VPS, but is bound to `loopback`. You use an SSH tunnel (`autossh`) to securely link the local daemon to the server. *(Recommended for high privacy)*.
+3.  **Mode C (Remote Public URL)**: OpenClaw runs on a remote server accessible via Tailscale, Localtonet, or a standard Reverse Proxy (Nginx/Caddy). The daemon transmits via HTTPS.
 
 ---
 
@@ -278,10 +258,9 @@ Data never leaves your machine without explicit permission.
 
 **Fikri Armia Fahmi (FikriAF)**
 
-<br/>
-<a href="mailto:fikriarmia27@gmail.com"><img src="https://img.shields.io/badge/Email-fikriarmia27%40gmail.com-D14836?style=for-the-badge&logo=gmail&logoColor=white" alt="Email" /></a>
-<a href="https://www.linkedin.com/in/fikri-armia-fahmi-b373b3288/"><img src="https://img.shields.io/badge/LinkedIn-Fikri%20Armia%20Fahmi-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
-<a href="https://faftech.net"><img src="https://img.shields.io/badge/Website-faftech.net-4CAF50?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website" /></a>
+*   **Email**: [fikriarmia27@gmail.com](mailto:fikriarmia27@gmail.com)
+*   **LinkedIn**: [Fikri Armia Fahmi](https://www.linkedin.com/in/fikri-armia-fahmi-b373b3288/)
+*   **Website**: [faftech.net](https://faftech.net)
 
 ---
 
