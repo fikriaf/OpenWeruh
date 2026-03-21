@@ -22,18 +22,30 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [The Problem It Solves](#the-problem-it-solves)
-- [System Architecture](#system-architecture)
-- [Core Features](#core-features)
-- [Persona Modes](#persona-modes)
-- [Deployment Topologies](#deployment-topologies)
-- [Installation Guide (Remote Server / VPS)](#installation-guide-remote-server--vps)
-- [Configuration](#configuration)
-- [Vision Provider Fallback](#vision-provider-fallback)
-- [Security & Privacy](#security--privacy)
-- [Roadmap](#roadmap)
-- [License](#license)
+<table>
+  <tr>
+    <td valign="top">
+      <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#the-problem-it-solves">The Problem It Solves</a></li>
+        <li><a href="#system-architecture">System Architecture</a></li>
+        <li><a href="#core-features">Core Features</a></li>
+        <li><a href="#persona-modes">Persona Modes</a></li>
+        <li><a href="#deployment-topologies">Deployment Topologies</a></li>
+      </ul>
+    </td>
+    <td valign="top">
+      <ul>
+        <li><a href="#installation-guide-remote-server--vps">Installation Guide (Remote Server / VPS)</a></li>
+        <li><a href="#configuration">Configuration</a></li>
+        <li><a href="#vision-provider-fallback">Vision Provider Fallback</a></li>
+        <li><a href="#security--privacy">Security & Privacy</a></li>
+        <li><a href="#roadmap">Roadmap</a></li>
+        <li><a href="#license">License</a></li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ---
 
