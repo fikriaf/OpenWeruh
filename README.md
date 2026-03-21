@@ -31,6 +31,7 @@
         <li><a href="#system-architecture">Architecture</a></li>
         <li><a href="#core-features">Features</a></li>
       </ul>
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="400" height="1" alt="" />
     </td>
     <td width="33%" valign="top">
       <ul>
@@ -39,6 +40,7 @@
         <li><a href="#installation-guide-remote-server--vps">Installation Guide</a></li>
         <li><a href="#configuration">Configuration</a></li>
       </ul>
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="400" height="1" alt="" />
     </td>
     <td width="34%" valign="top">
       <ul>
@@ -47,6 +49,7 @@
         <li><a href="#roadmap">Roadmap</a></li>
         <li><a href="#license">License</a></li>
       </ul>
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==" width="400" height="1" alt="" />
     </td>
   </tr>
 </table>
