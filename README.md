@@ -8,10 +8,10 @@
 
   <br />
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
-  [![OpenClaw](https://img.shields.io/badge/Ecosystem-OpenClaw-FF4A00.svg)](https://openclaw.ai)
-  [![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.8+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://openclaw.ai"><img src="https://img.shields.io/badge/Ecosystem-OpenClaw-FF4A00.svg?style=for-the-badge" alt="OpenClaw"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Status-Alpha-orange.svg?style=for-the-badge" alt="Status"></a>
 
   <br />
 
