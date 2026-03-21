@@ -98,8 +98,8 @@ OpenWeruh's value lies in its intelligent filtering. The agent adopts a specific
 OpenWeruh supports three deployment architectures:
 
 1.  **Mode A (Local)**: OpenClaw Gateway and the OpenWeruh daemon run on the exact same local machine.
-2.  **Mode B (SSH Tunnel)**: OpenClaw runs on a remote VPS, but is bound to `loopback`. You use an SSH tunnel (`autossh`) to securely link the local daemon to the server. *(Recommended for high privacy)*.
-3.  **Mode C (Remote Public URL)**: OpenClaw runs on a remote server accessible via Tailscale, Localtonet, or a standard Reverse Proxy (Nginx/Caddy). The daemon transmits via HTTPS.
+2.  **Mode B (SSH Tunnel)**: OpenClaw runs on a remote VPS, but is bound to `loopback`. You use an SSH tunnel ([`autossh`](https://www.harding.motd.ca/autossh/)) to securely link the local daemon to the server. *(Recommended for high privacy)*.
+3.  **Mode C (Remote Public URL)**: OpenClaw runs on a remote server accessible via [Tailscale](https://tailscale.com), [Localtonet](https://localtonet.com), or a standard Reverse Proxy ([Nginx](https://nginx.org) / [Caddy](https://caddyserver.com)). The daemon transmits via HTTPS.
 
 ---
 
@@ -222,12 +222,12 @@ vision:
 **Supported providers:**
 <br/>
 <div align="center">
-  <img src="assets/openai_logo.svg" height="28" alt="OpenAI" />
+  <img src="assets/openai_whitebg.svg" height="28" alt="OpenAI" />
   <img src="https://img.shields.io/badge/Anthropic-cc9c84?style=for-the-badge&logo=Anthropic&logoColor=black" alt="Anthropic" />
   <img src="https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=Google%20Gemini&logoColor=white" alt="Google Gemini" />
   <img src="https://img.shields.io/badge/Ollama-FFFFFF?style=for-the-badge&logo=Ollama&logoColor=black" alt="Ollama" />
   <br/>
-  <img src="assets/mistral_logo.svg" height="28" alt="Mistral AI" />
+  <img src="assets/mistral_whitebg.svg?v=3" height="28" alt="Mistral AI" />
   <img src="https://img.shields.io/badge/OpenRouter-1A1A1A?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxZW0iIGhlaWdodD0iMWVtIiB2aWV3Qm94PSIwIDAgMjQgMjQiPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiI+PHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjgiIHg9IjIiIHk9IjE0IiByeD0iMiIvPjxwYXRoIGQ9Ik02LjAxIDE4SDZtNC4wMSAwSDEwbTUtOHY0bTIuODQtNi44M2E0IDQgMCAwIDAtNS42NiAwbTguNDgtMi44M2E4IDggMCAwIDAtMTEuMzEgMCIvPjwvZz48L3N2Zz4=&logoColor=white" alt="OpenRouter" />
   <img src="https://img.shields.io/badge/Together_AI-222222?style=for-the-badge&logo=data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIGlkPSJMYXllcl8xIiBkYXRhLW5hbWU9IkxheWVyIDEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDQ4NC45OCA0NTIuNSI+PGRlZnM+PHN0eWxlPi5jbHMtMSB7ZmlsbDogI2VmMmNjMTt9LmNscy0yIHtmaWxsOiAjY2FhZWY1O30uY2xzLTMge2ZpbGw6ICNmYzRjMDI7fTwvc3R5bGU+PC9kZWZzPjxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTQ2OC43Miw2MC42N0M0MzUuMjUsMi42OSwzNjEuMTEtMTcuMTgsMzAzLjEyLDE2LjNjLTM3LjMsMjEuNTQtNTguODIsNTkuNjItNjAuNTIsOTkuNjlsMTIxLjE1LjE2djEwLjM5aC0xMjEuMTVjLjc4LDE4Ljk0LDYuMDIsMzcuODEsMTYuMTUsNTUuMzYsMzMuNDgsNTcuOTgsMTA3LjYyLDc3Ljg1LDE2NS42LDQ0LjM3LDU3Ljk4LTMzLjQ4LDc3Ljg1LTEwNy42Miw0NC4zNy0xNjUuNloiLz48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik0xNi4yNiw2MC42M0MtMTcuMjEsMTE4LjYxLDIuNjUsMTkyLjc2LDYwLjYzLDIyNi4yM2MzNy4zLDIxLjU0LDgxLjA0LDIxLjEzLDExNi41OSwyLjU3bC02MC40NC0xMDUsOS01LjE4LDYwLjU3LDEwNC45MWMxNi4wMS0xMC4xNCwyOS43NC0yNC4xMiwzOS44Ny00MS42NywzMy40OC01Ny45OCwxMy42MS0xMzIuMTItNDQuMzctMTY1LjZDMTIzLjg4LTE3LjIxLDQ5Ljc0LDIuNjUsMTYuMjYsNjAuNjNaIi8+PHBhdGggY2xhc3M9ImNscy0zIiBkPSJNMjQyLjQ2LDQ1Mi41YzY2Ljk1LDAsMTIxLjIzLTU0LjI3LDEyMS4yMy0xMjEuMjMsMC00My4wNy0yMi4yMi04MC43NS01Ni4wNy0xMDIuMjVsLTYwLjcxLDEwNC44NC04Ljk5LTUuMjEsNjAuNTctMTA0LjkxYy0xNi43OS04Ljc5LTM1Ljc1LTEzLjctNTYuMDItMTMuNy02Ni45NSwwLTEyMS4yMyw1NC4yNy0xMjEuMjMsMTIxLjIzLDAsNjYuOTUsNTQuMjcsMTIxLjIzLDEyMS4yMywxMjEuMjNaIi8+PC9zdmc+&logoColor=white" alt="Together AI" />
   <img src="https://img.shields.io/badge/xAI-000000?style=for-the-badge&logo=x&logoColor=white" alt="xAI" />
@@ -258,9 +258,10 @@ Data never leaves your machine without explicit permission.
 
 **Fikri Armia Fahmi (FikriAF)**
 
-*   **Email**: [fikriarmia27@gmail.com](mailto:fikriarmia27@gmail.com)
-*   **LinkedIn**: [Fikri Armia Fahmi](https://www.linkedin.com/in/fikri-armia-fahmi-b373b3288/)
-*   **Website**: [faftech.net](https://faftech.net)
+<br/>
+<a href="mailto:fikriarmia27@gmail.com"><img src="https://img.shields.io/badge/Email-fikriarmia27%40gmail.com-D14836?style=for-the-badge&logo=gmail&logoColor=white" alt="Email" /></a>
+<a href="https://www.linkedin.com/in/fikri-armia-fahmi-b373b3288/"><img src="https://img.shields.io/badge/LinkedIn-Fikri%20Armia%20Fahmi-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
+<a href="https://faftech.net"><img src="https://img.shields.io/badge/Website-faftech.net-4CAF50?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website" /></a>
 
 ---
 
