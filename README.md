@@ -20,121 +20,190 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [The Problem It Solves](#the-problem-it-solves)
+- [System Architecture](#system-architecture)
+- [Core Features](#core-features)
+- [Persona Modes](#persona-modes)
+- [Deployment Topologies](#deployment-topologies)
+- [Installation Guide (Remote Server / VPS)](#installation-guide-remote-server--vps)
+- [Configuration](#configuration)
+- [Vision Provider Fallback](#vision-provider-fallback)
+- [Security & Privacy](#security--privacy)
+- [Roadmap](#roadmap)
+- [License](#license)
+
+---
+
 ## Overview
 
-OpenWeruh bridges the gap between real-time visual context on your screen and the intelligence of the OpenClaw agent ecosystem. It operates as a local background daemon that captures your screen, analyzes changes, and proactively sends relevant context to your OpenClaw Gateway. 
+**OpenWeruh** is an underlying context layer for the [OpenClaw](https://openclaw.ai) ecosystem. It bridges the gap between the real-time visual context on your screen and the existing intelligence of the OpenClaw agent.
 
-Instead of waiting for you to trigger a command, OpenWeruh allows the agent to observe your workflow and intervene intelligently based on configured persona modes.
+Instead of waiting for you to trigger a command or depending strictly on time-based crons, OpenWeruh allows the agent to observe your workflow and intervene intelligently based on configured persona modes. If you are staring at a bug, reading a controversial claim, or deviating from your goals, OpenWeruh securely feeds that context to your agent.
 
-For a comprehensive technical architecture and design philosophy, please refer to the [Whitepaper](WHITEPAPER.md).
+For an in-depth understanding of the design philosophy, refer to the [Whitepaper v0.1](WHITEPAPER.md).
+
+---
+
+## The Problem It Solves
+
+1.  **Blind Agents**: Standard AI agents can read files and APIs, but they cannot see what you are currently doing on your screen.
+2.  **Reactive vs. Proactive**: Most "screen capture" skills require you to explicitly type *"take a screenshot"*. This is reactive. OpenWeruh runs in the background and speaks up only when necessary.
+3.  **OS Permissions**: Running headless daemons that need screen capture permissions (especially on macOS) is highly problematic. OpenWeruh separates the capture daemon from the main OpenClaw Gateway to solve this natively.
+
+---
+
+## System Architecture
+
+OpenWeruh consists of four decoupled components:
+
+1.  **Python Screen Daemon (`daemon/`)**: Captures the screen, applies perceptual hashing (`pHash`) to detect meaningful changes, and securely dispatches the data via Webhooks.
+2.  **OpenClaw Skill (`skill/`)**: Instructs the OpenClaw agent on how to react to screen context payloads using defined "Persona Modes."
+3.  **Startup Hook (`hook/`)**: Injects the `screen.context` capability into the agent's awareness during the `gateway:startup` event.
+4.  **Configuration (`config/`)**: A dedicated `weruh.yaml` file to control sensitivity, active hours, and vision fallbacks.
 
 ---
 
 ## Core Features
 
-*   **Real-Time Context**: Continuously monitors screen activity with minimal performance overhead using fast perceptual hashing (`pHash`).
-*   **Persona Modes**: Configurable behavior profiles (`skeptic`, `researcher`, `focus`, `guardian`, `silent`) dictate how and when the agent intervenes.
-*   **Privacy First**: All processing is local or sent securely to your own infrastructure. Screenshots are never permanently stored.
-*   **Vision Provider Fallback**: If the OpenClaw Gateway lacks built-in vision support, OpenWeruh can seamlessly fall back to external APIs (OpenAI, Anthropic, Google Gemini, Ollama, etc.) to convert screen frames into text descriptions.
+*   **Change Detection (`pHash`)**: Ensures the agent is only called when significant visual changes occur, minimizing API costs and performance overhead.
+*   **Decoupled Operation**: Does not conflict with existing OpenClaw skills or crons.
+*   **Vision Provider Fallback**: If OpenClaw's internal image pipeline drops the frame or lacks a configured vision model, OpenWeruh automatically falls back to OpenAI, Anthropic, Google Gemini, Ollama, or custom providers.
 
 ---
 
-## Installation Guide (Remote Gateway Deployment)
+## Persona Modes
 
-This tutorial assumes you are running OpenClaw on a remote server (VPS) and working locally on a separate laptop or PC. 
+OpenWeruh's value lies in its intelligent filtering. The agent adopts a specific persona depending on your needs:
 
-### Prerequisites
+| Mode | Behavior |
+| :--- | :--- |
+| **`skeptic`** | Scrutinizes news, claims, or facts for bias. Actively searches for counter-arguments and presents them. |
+| **`researcher`** | Observes technical reading and automatically provides supporting definitions, related papers, or context. |
+| **`focus`** | Monitors activity against a declared session goal. Intervenes if you deviate (e.g., browsing social media while coding). |
+| **`guardian`** | Tracks idle time or prolonged usage of distracting applications, gently reminding you to take breaks. |
+| **`silent`** | Background recording only. No proactive notifications. Ideal for generating end-of-day activity summaries. |
 
-*   **Server**: OpenClaw Gateway running and accessible via an endpoint (WebUI or API).
-*   **Local Machine**: Python 3.8 or higher installed.
+---
 
-### 1. Server Configuration (OpenClaw)
+## Deployment Topologies
 
-First, enable the webhook interface on your OpenClaw server so it can receive context payloads from your local machine.
+OpenWeruh supports three deployment architectures:
 
-Run the following commands on your server:
+1.  **Mode A (Local)**: OpenClaw Gateway and the OpenWeruh daemon run on the exact same local machine.
+2.  **Mode B (SSH Tunnel)**: OpenClaw runs on a remote VPS, but is bound to `loopback`. You use an SSH tunnel (`autossh`) to securely link the local daemon to the server. *(Recommended for high privacy)*.
+3.  **Mode C (Remote Public URL)**: OpenClaw runs on a remote server accessible via Tailscale, Localtonet, or a standard Reverse Proxy (Nginx/Caddy). The daemon transmits via HTTPS.
+
+---
+
+## Installation Guide (Remote Server / VPS)
+
+*The following guide assumes **Mode C** (or Mode B with a mapped port) where OpenClaw is running remotely and your workstation is local.*
+
+### Step 1: Server Configuration (OpenClaw)
+
+Enable the webhook interface on your OpenClaw server. Connect to your VPS and run:
 
 ```bash
 openclaw config set hooks.enabled true
 openclaw config set hooks.token "YOUR_SECURE_TOKEN"
 openclaw restart
 ```
+*(Keep this token safe; it authenticates the incoming images).*
 
-### 2. Local Setup (OpenWeruh Daemon)
+### Step 2: Local Installation (Workstation)
 
-On your local workstation, clone this repository and install the daemon components.
+On the laptop/PC whose screen you wish to monitor, clone this repository and install the dependencies:
 
 ```bash
 git clone https://github.com/fikriaf/OpenWeruh.git
 cd OpenWeruh
 
-# Execute the installation script
+# Make scripts executable (Linux/macOS)
+chmod +x scripts/*.sh
+
+# Run the installer
 ./scripts/install.sh
 ```
 
-### 3. Client Configuration
+*Note for Windows users: Simply run `pip install -r daemon/requirements.txt`, then manually copy `config/weruh.example.yaml` to `C:\Users\YourUser\.config\openweruh\weruh.yaml`.*
 
-The installation script creates a configuration file at `~/.config/openweruh/weruh.yaml`. Open this file and update the `gateway` settings to match your remote server.
+### Step 3: Configure the Daemon
+
+Edit the generated configuration file located at `~/.config/openweruh/weruh.yaml`.
 
 ```yaml
 gateway:
   mode: "remote"
-  url: "https://your-openclaw-server.com"
+  url: "https://your-openclaw-endpoint.com"  # e.g., https://claw.yourdomain.com
   hook_token: "YOUR_SECURE_TOKEN"
+
+capture:
+  interval_seconds: 15
+  change_threshold: 10
+  active_hours: "07:00-23:00"
+
+persona:
+  mode: "guardian"
+  language: "en"
 ```
 
-If your remote OpenClaw server does not process images reliably or lacks a configured vision model, you must configure a fallback vision provider in the same `weruh.yaml` file. For example, to use Google Gemini:
-
-```yaml
-vision:
-  provider:
-    type: "google"
-    api_key: "YOUR_GEMINI_API_KEY"
-    model: "gemini-2.5-flash"
-```
-
-### 4. Running the Daemon
-
-Start the OpenWeruh background process on your local machine:
+### Step 4: Run the Daemon
 
 ```bash
 python daemon/weruh.py start
 ```
 
-The daemon will now monitor your screen based on the interval configured in `weruh.yaml` (default: 15 seconds). When significant visual changes occur, context is transmitted to your OpenClaw server, allowing the agent to analyze the data and send proactive messages to your connected channels (e.g., Telegram).
+---
+
+## Vision Provider Fallback
+
+If your OpenClaw server's `imageModel` is not configured correctly, or you are experiencing pipeline drops, OpenWeruh includes an internal Vision Adapter.
+
+By defining a fallback provider in `weruh.yaml`, the daemon will process the image locally into a text description *before* sending it to the OpenClaw webhook.
+
+Example for **Google Gemini**:
+```yaml
+vision:
+  provider:
+    type: "google"
+    api_key: "AIzaSy..."
+    model: "gemini-2.5-flash"
+```
+
+Example for **Ollama (Fully Local)**:
+```yaml
+vision:
+  provider:
+    type: "ollama"
+    url: "http://localhost:11434/api/chat"
+    model: "llava:13b"
+```
+
+*Supported providers: `openai`, `anthropic`, `google`, `ollama`, `openrouter`, `mistral`, `together`, `xai`, `custom`.*
 
 ---
 
-## Directory Structure
+## Security & Privacy
 
-```text
-openweruh/
-├── README.md                  # This file
-├── WHITEPAPER.md              # Technical architecture documentation
-├── LICENSE                    # MIT License
-├── assets/                    # Static assets like logos
-├── config/
-│   └── weruh.example.yaml     # Configuration template
-├── daemon/                    # Python background process
-│   ├── capture.py             # Screen capture and hashing logic
-│   ├── requirements.txt       # Daemon dependencies
-│   ├── trigger.py             # Webhook transmission utility
-│   ├── vision.py              # Fallback vision API integrations
-│   └── weruh.py               # Main daemon entrypoint
-├── demo/                      # Demonstration assets
-├── hook/
-│   └── weruh-boot/            # OpenClaw startup hook
-├── scripts/
-│   ├── install.sh             # Interactive installation script
-│   └── uninstall.sh           # Removal script
-└── skill/
-    └── openweruh/             # OpenClaw Agent instructions
-        ├── SKILL.md
-        └── references/
-```
+Data never leaves your machine without explicit permission.
+
+*   **No Permanent Storage**: Screenshots are temporarily saved to `/tmp/weruh-frame.jpg` and immediately overwritten.
+*   **Direct Transmission**: In the primary path, images are sent directly to your own OpenClaw gateway. No third-party servers are involved.
+*   **Safeguards**: Active hours prevent capturing during personal time, and the change threshold prevents capturing highly repetitive frames. API keys are stored locally with `600` permissions.
+
+---
+
+## Roadmap
+
+- [x] **v0.1**: Foundation (Python daemon, pHash detection, SKILL.md, Webhook integration).
+- [ ] **v0.2**: Vision Intelligence enhancements (Multi-provider fallback support integration, daily summary crons).
+- [ ] **v0.3**: Advanced Context (Session goals, browser extensions for DOM context, history dashboard).
 
 ---
 
 ## License
 
-This project is open-source software distributed under the terms of the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
