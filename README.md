@@ -57,6 +57,11 @@ For an in-depth understanding of the design philosophy, refer to the [Whitepaper
 
 ## System Architecture
 
+<div align="center">
+  <img src="assets/openweruh_flowchart.svg" alt="OpenWeruh Architecture Flowchart" width="800" />
+</div>
+<br/>
+
 OpenWeruh consists of four decoupled components:
 
 1.  **Python Screen Daemon (`daemon/`)**: Captures the screen, applies perceptual hashing (`pHash`) to detect meaningful changes, and securely dispatches the data via Webhooks.
