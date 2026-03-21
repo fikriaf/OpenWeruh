@@ -27,18 +27,22 @@
     <td valign="top">
       <ul>
         <li><a href="#overview">Overview</a></li>
-        <li><a href="#the-problem-it-solves">The Problem It Solves</a></li>
-        <li><a href="#system-architecture">System Architecture</a></li>
-        <li><a href="#core-features">Core Features</a></li>
-        <li><a href="#persona-modes">Persona Modes</a></li>
-        <li><a href="#deployment-topologies">Deployment Topologies</a></li>
+        <li><a href="#the-problem-it-solves">The Problem</a></li>
+        <li><a href="#system-architecture">Architecture</a></li>
+        <li><a href="#core-features">Features</a></li>
       </ul>
     </td>
     <td valign="top">
       <ul>
-        <li><a href="#installation-guide-remote-server--vps">Installation Guide (Remote Server / VPS)</a></li>
+        <li><a href="#persona-modes">Persona Modes</a></li>
+        <li><a href="#deployment-topologies">Deployments</a></li>
+        <li><a href="#installation-guide-remote-server--vps">Installation Guide</a></li>
         <li><a href="#configuration">Configuration</a></li>
-        <li><a href="#vision-provider-fallback">Vision Provider Fallback</a></li>
+      </ul>
+    </td>
+    <td valign="top">
+      <ul>
+        <li><a href="#vision-provider-fallback">Vision Fallback</a></li>
         <li><a href="#security--privacy">Security & Privacy</a></li>
         <li><a href="#roadmap">Roadmap</a></li>
         <li><a href="#license">License</a></li>
