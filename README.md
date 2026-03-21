@@ -144,6 +144,12 @@ openclaw restart
 
 ### Step 2: Local Installation (Workstation)
 
+**For Linux & macOS (One-line Install)**
+```bash
+curl -fsSL https://raw.githubusercontent.com/fikriaf/OpenWeruh/main/scripts/install.sh | bash
+```
+
+**Manual Setup (Windows or Manual Configuration)**
 On the laptop/PC whose screen you wish to monitor, clone this repository first:
 
 ```bash
@@ -152,7 +158,6 @@ cd OpenWeruh
 ```
 
 #### Windows
-
 1. Install Python dependencies:
    ```cmd
    pip install -r daemon\requirements.txt
@@ -169,7 +174,6 @@ cd OpenWeruh
    ```
 
 #### Linux
-
 1. Make the installation script executable:
    ```bash
    chmod +x scripts/*.sh
@@ -180,7 +184,6 @@ cd OpenWeruh
    ```
 
 #### macOS
-
 1. Make the installation script executable:
    ```bash
    chmod +x scripts/*.sh
