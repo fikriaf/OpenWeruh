@@ -1,0 +1,52 @@
+# OpenWeruh Configuration File
+# Save this file to ~/.config/openweruh/weruh.yaml
+
+gateway:
+  # Deployment mode: local, tunnel, or remote
+  mode: "local"
+  # URL to your OpenClaw gateway
+  url: "http://127.0.0.1:18789"
+  # Webhook token from openclaw.json
+  hook_token: "your-hook-secret"
+  
+capture:
+  interval_seconds: 15        # how often screenshots are taken
+  change_threshold: 10        # minimum pHash distance to trigger
+  active_hours: "07:00-23:00" # only active during working hours
+
+persona:
+  mode: "silent"                  # skeptic | researcher | focus | guardian | silent
+  language: "en"                  # notification language: en | id
+  tone: "casual"                  # casual | formal
+  intervention_threshold: "medium" # low | medium | high
+  notify_after_idle_minutes: 5
+
+modes:
+  skeptic:
+    description: "Always look for counter-arguments from what is being read"
+    trigger_keywords: ["news", "claim", "fact", "study", "research"]
+
+  researcher:
+    description: "Automatically find supporting sources for relevant content"
+    trigger_keywords: ["paper", "journal", "definition", "concept"]
+
+  focus:
+    description: "Intervene if user drifts from the topic declared at session start"
+    requires_session_goal: true
+
+  guardian:
+    description: "Monitor duration per app/website, send reminders"
+    idle_limit_minutes: 30
+
+  silent:
+    description: "Record context without intervention. Only generate daily summary."
+
+# Optional fallback vision provider
+# Use this if your OpenClaw imageModel is not properly configured
+vision:
+  provider:
+    # type: "openai" # openai | anthropic | google | ollama | openrouter | mistral | together | xai | custom
+    # url: "" # leave empty for default URL, fill in to override
+    # api_key: ""
+    # model: ""
+    # timeout_seconds: 30
