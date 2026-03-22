@@ -68,42 +68,39 @@ def get_choice(prompt, choices):
     setup_windows_ansi()
     selected = [0]
 
-    def show():
-        sys.stdout.write("\x0c")
-        sys.stdout.flush()
-        print()
-        for line in BANNER_LINES:
-            print(colorize_line(line))
-        print("\n" + " " * 35 + f"{RED_ORANGE}S E T U P{RESET}\n")
-        print(f"  {prompt}")
-        print()
+    def clear_choices():
+        for _ in range(len(choices) + 1):
+            sys.stdout.write("\033[1A\033[2K")
+
+    def render():
+        clear_choices()
         for i, choice in enumerate(choices):
             marker = "\033[36m>\033[0m " if i == selected[0] else "  "
             print(f"  {marker}{choice}")
-        print()
         print(
             "  \033[90m[\u2191\u2193 navigate   \033[36mEnter\033[0m\033[90m confirm\033[0m"
         )
 
+    print()
+    print(f"  {prompt}")
+    print()
+    render()
+
     while True:
-        show()
-        while True:
+        try:
             key = _read_key()
             if key == "up":
                 selected[0] = (selected[0] - 1) % len(choices)
-                break
+                render()
             elif key == "down":
                 selected[0] = (selected[0] + 1) % len(choices)
-                break
+                render()
             elif key == "enter":
                 print()
                 return selected[0]
-            elif key == "ignore":
-                pass
-            else:
-                pass
-        if key == "enter":
-            break
+        except KeyboardInterrupt:
+            print("\n\nSetup cancelled.")
+            sys.exit(1)
 
 
 RED_ORANGE = "\033[38;2;255;90;20m"
