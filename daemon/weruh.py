@@ -184,17 +184,18 @@ def _show_openclaw_notes():
     ]:
         if os.path.exists(src):
             try:
-                if os.path.islink(dst) or (os.name == "nt" and os.path.isdir(dst)):
-                    if sys.platform == "win32":
-                        import subprocess
+                if os.path.islink(dst):
+                    os.unlink(dst)
+                elif os.path.isdir(dst):
+                    try:
+                        os.rmdir(dst)
+                    except OSError:
+                        import shutil as _shutil
 
-                        subprocess.run(["cmd", "/c", "rmdir", dst], capture_output=True)
-                    else:
-                        os.remove(dst)
-                if not os.path.exists(dst):
-                    os.makedirs(os.path.dirname(dst), exist_ok=True)
-                    shutil.copytree(src, dst)
-                    copied.append(label)
+                        _shutil.rmtree(dst)
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copytree(src, dst)
+                copied.append(label)
             except Exception:
                 pass
 
