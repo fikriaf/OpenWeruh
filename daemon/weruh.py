@@ -191,7 +191,7 @@ def _install_openclaw_components(config: Dict):
         "   openclaw hooks install OpenWeruh/hook/weruh-boot\n\n"
         "If clawhub is not installed, run first: npm install -g clawhub\n"
         "After all commands succeed, confirm by running: openclaw hooks list\n"
-        "Then restart the gateway: openclaw gateway restart\n\n"
+        "Then restart the gateway: openclaw gateway\n\n"
         "Report the output of each command."
     )
 
