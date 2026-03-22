@@ -211,11 +211,14 @@ def _show_openclaw_notes():
     print()
     print("  \033[33m?\033[0m  Telegram not reaching you?")
     print("     \033[32mopenclaw config set channels.telegram.dmPolicy open\033[0m")
+    print(
+        "     \033[32mopenclaw config set channels.telegram.allowFrom '[\"*\"]'\033[0m"
+    )
     print()
     print("  \033[33m?\033[0m  See \033[91m'unknown entries (image)'\033[0m error?")
     print("     \033[32mopenclaw config set tools.profile minimal\033[0m")
     print()
-    print("  \033[90m[Press Enter to continue...]\033[0m")
+    print("  \033[90m[Press Enter to continue with OpenWeruh setup...]\033[0m")
     input()
 
 
