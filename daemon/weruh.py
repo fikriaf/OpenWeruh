@@ -67,15 +67,12 @@ def _read_key():
 def get_choice(prompt, choices):
     setup_windows_ansi()
     selected = 0
-    total_lines = len(choices) + 3
-
-    def clear():
-        for _ in range(total_lines):
-            sys.stdout.write("\033[1A\033[2K")
-        sys.stdout.flush()
 
     def render():
-        clear()
+        sys.stdout.write("\x0c")
+        print()
+        for line in BANNER_LINES:
+            print(colorize_line(line))
         print()
         print(f"  {prompt}")
         print()
@@ -86,6 +83,7 @@ def get_choice(prompt, choices):
         print(
             "  \033[90m[\u2191\u2193 navigate   \033[36mEnter\033[0m\033[90m confirm\033[0m"
         )
+        sys.stdout.flush()
 
     render()
     while True:
