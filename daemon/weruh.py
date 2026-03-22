@@ -209,7 +209,7 @@ def _show_openclaw_notes():
     print("    The skill path resolves outside OpenClaw's configured root.")
     print("    Make sure you copied (not symlinked) the skill folder.")
     print()
-    print("  After any OpenClaw config change, restart: openclaw restart")
+    print("    Restart OpenClaw manually after changing the config.")
     print()
     print("  \033[90m[Press Enter to continue with OpenWeruh setup...]\033[0m")
     input()
