@@ -258,11 +258,13 @@ def _show_openclaw_setup_commands(token: str):
         "  \033[90m  BEFORE continuing. This enables the webhook that OpenWeruh needs.\033[0m"
     )
     print()
-    print("  \033[32mRun in OpenClaw terminal (web UI / CLI):\033[0m")
+    print("  \033[32mCopy and Paste in OpenClaw terminal (web UI / CLI):\033[0m")
     print()
+    print("  \033[36mRun the command below!\033[0m")
     print("  \033[36mopenclaw config set hooks.enabled true\033[0m")
     print(f'  \033[36mopenclaw config set hooks.token "{token}"\033[0m')
     print("  \033[36mopenclaw config set hooks.allowRequestSessionKey true\033[0m")
+    print("  \033[36mAnd then restart: openclaw gateway\033[0m")
     print()
     print(
         "  \033[90m  After running the commands above, press Enter to continue.\033[0m"
