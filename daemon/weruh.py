@@ -91,9 +91,13 @@ def get_choice(prompt, choices):
             key = _read_key()
             if key == "up":
                 selected = (selected - 1) % len(choices)
+                sys.stdout.write("\r")
+                sys.stdout.flush()
                 render()
             elif key == "down":
                 selected = (selected + 1) % len(choices)
+                sys.stdout.write("\r")
+                sys.stdout.flush()
                 render()
             elif key == "enter":
                 print()
