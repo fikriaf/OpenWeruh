@@ -3,6 +3,7 @@ import sys
 import time
 import yaml
 import getpass
+import httpx
 from capture import ScreenCapturer
 from trigger import trigger_agent_with_image, trigger_agent_with_text
 from vision import VisionProviderAdapter
@@ -99,26 +100,66 @@ def get_choice(prompt, choices):
             sys.exit(1)
 
 
+def test_gateway_connection(url: str, token: str) -> bool:
+    print("\nTesting Gateway connection...")
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        with httpx.Client(timeout=5) as client:
+            # We send an empty JSON payload. The gateway should return 400 Bad Request if auth passes,
+            # or 401/403 if auth fails.
+            response = client.post(
+                f"{url.rstrip('/')}/hooks/agent", json={}, headers=headers
+            )
+
+            if response.status_code in [401, 403]:
+                print(f"❌ Error: Authentication failed (HTTP {response.status_code}).")
+                print("   Check your hook token!")
+                return False
+            elif response.status_code == 404:
+                print(f"❌ Error: Webhook endpoint not found (HTTP 404).")
+                print("   Check your Gateway URL or ensure 'hooks.enabled' is true.")
+                return False
+            elif response.status_code in [400, 200]:
+                print("✓ Gateway connection and authentication successful!")
+                return True
+            else:
+                print(f"⚠️ Warning: Unexpected response HTTP {response.status_code}.")
+                return True
+    except httpx.RequestError as e:
+        print(f"❌ Error: Cannot connect to Gateway ({e}).")
+        print("   Is OpenClaw running? Is the URL correct?")
+        return False
+
+
 def run_setup():
     print_banner()
 
     try:
         # 1. Gateway Location
-        gw_idx = get_choice(
-            "? Where is your OpenClaw Gateway running?",
-            [
-                "On this same machine (local)",
-                "On a remote server (SSH tunnel)",
-                "On a remote server (public URL / Tailscale)",
-            ],
-        )
+        while True:
+            gw_idx = get_choice(
+                "? Where is your OpenClaw Gateway running?",
+                [
+                    "On this same machine (local)",
+                    "On a remote server (SSH tunnel)",
+                    "On a remote server (public URL / Tailscale)",
+                ],
+            )
 
-        mode = ["local", "tunnel", "remote"][gw_idx]
+            mode = ["local", "tunnel", "remote"][gw_idx]
 
-        default_url = "http://127.0.0.1:18789" if mode != "remote" else "https://"
-        url = input(f"? Gateway URL [{default_url}]: ").strip() or default_url
+            default_url = "http://127.0.0.1:18789" if mode != "remote" else "https://"
+            url = input(f"? Gateway URL [{default_url}]: ").strip() or default_url
 
-        token = getpass.getpass("? Hook token (from openclaw.json → hooks.token): ")
+            token = getpass.getpass("? Hook token (from openclaw.json → hooks.token): ")
+
+            if test_gateway_connection(url, token):
+                break
+
+            print("\nLet's try configuring the Gateway again.\n")
 
         config = {
             "gateway": {"mode": mode, "url": url, "hook_token": token},
