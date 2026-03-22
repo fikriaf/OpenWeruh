@@ -177,9 +177,8 @@ Enable the webhook interface on your OpenClaw server. Connect to your VPS and ru
 openclaw config set hooks.enabled true
 openclaw config set hooks.token "YOUR_SECURE_TOKEN"
 openclaw config set hooks.allowRequestSessionKey true
-openclaw restart
 ```
-*(Keep this token safe; it authenticates the incoming images).*
+*(After setting the config, restart your OpenClaw server. Keep the token safe; it authenticates the incoming images).*
 
 ### Step 2: Local Installation (Workstation)
 

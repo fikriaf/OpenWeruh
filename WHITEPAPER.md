@@ -722,7 +722,8 @@ How to get the `hook_token`:
 # In OpenClaw, enable webhooks first
 openclaw config set hooks.enabled true
 openclaw config set hooks.token "your-own-secret"
-openclaw restart
+openclaw config set hooks.allowRequestSessionKey true
+# Restart your OpenClaw Gateway to apply changes
 ```
 
 Or via `openclaw.json`:
