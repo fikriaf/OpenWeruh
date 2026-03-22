@@ -148,7 +148,7 @@ persona:
   intervention_threshold: "medium"  # low | medium | high
 
 capture:
-  interval_seconds: 15              # time between screenshots
+  interval_seconds: 60              # time between screenshots (60s prevents agent queue flooding)
   change_threshold: 10              # pHash distance required to trigger agent
   active_hours: "07:00-23:00"       # prevent capturing during personal time
   notify_after_idle_minutes: 5      # wait for screen to settle before analyzing
@@ -206,11 +206,6 @@ cd OpenWeruh
    mkdir "%USERPROFILE%\.config\openweruh"
    copy config\weruh.example.yaml "%USERPROFILE%\.config\openweruh\weruh.yaml"
    ```
-3. Copy the OpenClaw skill and hook manually to your OpenClaw directories:
-   ```cmd
-   xcopy /E /I skill\openweruh "%USERPROFILE%\.openclaw\skills\openweruh"
-   xcopy /E /I hook\weruh-boot "%USERPROFILE%\.openclaw\hooks\weruh-boot"
-   ```
 
 #### Linux
 1. Make the installation script executable:
@@ -242,7 +237,9 @@ python daemon/weruh.py setup
 ```
 
 **Setup will:**
-1. Auto-install skill/hook into OpenClaw directories
+1. Ask gateway location (local or remote server)
+   - **Local**: auto-installs skill + hook into `~/.openclaw/` directories
+   - **Remote**: triggers OpenClaw agent to clone repo + `clawhub install` + `openclaw hooks install` (agent needs `exec` tool enabled)
 2. Show OpenClaw configuration notes (edit `openclaw.json` where OpenClaw runs)
 3. Configure Gateway URL and hook token
 4. Choose screen analysis mode (OCR, Vision API, or direct image)
@@ -422,7 +419,7 @@ channels.telegram.dmPolicy = "open"
 
 **Cause:** Too many webhook triggers per second.
 
-**Fix:** Increase `capture.interval_seconds` in `weruh.yaml` (e.g., `30` or `60`) and `capture.change_threshold`.
+**Fix:** Set `capture.interval_seconds` to at least `60` in `weruh.yaml`, and increase `capture.change_threshold`.
 
 ### Tesseract OCR not found on startup
 

@@ -7,7 +7,7 @@ gateway:
   hook_token: "your-hook-secret"
 
 capture:
-  interval_seconds: 15           # how often screenshots are taken
+  interval_seconds: 60           # how often screenshots are taken (60s prevents queue flooding)
   change_threshold: 10           # minimum pHash distance to trigger
   active_hours: "07:00-23:00"   # only active during working hours
 

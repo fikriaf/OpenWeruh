@@ -157,7 +157,7 @@ if significant change → save to /tmp/weruh-frame.jpg →
 
 ```yaml
 capture:
-  interval_seconds: 15        # how often screenshots are taken
+  interval_seconds: 60        # how often screenshots are taken
   change_threshold: 10        # minimum pHash distance to trigger
   active_hours: "07:00-23:00" # only active during working hours
 ```
@@ -566,9 +566,7 @@ OpenClaw provides an HTTP webhook endpoint that can be called by an external pro
 
 **Important — `wakeMode` behavior:**
 - By default (no `wakeMode` or `wakeMode: idle`), screen capture is **added to session context** — agent reads it when human sends a message. No new agent run is triggered.
-- `wakeMode: now` triggers a **new agent run** every time a capture is sent. This can flood the queue if captures are frequent (e.g., every 15s). Only use `wakeMode: now` if you want the agent to react immediately to every screen change.
-
-OpenWeruh uses the default `wakeMode` (idle) so captures are accumulated as context — the agent responds naturally when the human inputs a message.
+- `wakeMode: now` triggers a **new agent run** every time a capture is sent. This can flood the queue if captures are too frequent. OpenWeruh uses `wakeMode: now` with a **60-second interval** to balance realtime responsiveness with queue stability.
 
 Official documentation: `docs.openclaw.ai/automation/webhook`
 
@@ -890,8 +888,9 @@ For security, `gateway.remote.token` is only used as a last resort when no expli
 
 | Aspect | Mode A (Local) | Mode B (SSH Tunnel) | Mode C (Remote) |
 |---|---|---|---|
-| Setup complexity | Minimal | Moderate | High |
-| Security | Local, safe | Encrypted SSH | Depends on setup |
+| Setup complexity | Minimal | Moderate | Moderate |
+| Skill/Hook install | Direct copy | Agent exec via webhook | Agent exec via webhook |
+| Security | Local, safe | Encrypted SSH | Depends on proxy |
 | Always-on | No (requires laptop on) | Yes (VPS) | Yes (VPS) |
 | Vision fallback | Local / cloud | Local / cloud | Cloud recommended |
 | Recommended for | Dev / testing | Personal production | Multi-user / team |
@@ -900,7 +899,7 @@ For security, `gateway.remote.token` is only used as a last resort when no expli
 
 ### Interactive Installer
 
-The OpenWeruh installer detects the scenario and guides the setup:
+The OpenWeruh installer detects local vs. remote deployment and handles component installation accordingly:
 
 ```bash
 $ python daemon/weruh.py setup
@@ -912,18 +911,35 @@ OpenWeruh Setup
     On a remote server (SSH tunnel)
     On a remote server (public URL / Tailscale)
 
-? Gateway URL: http://127.0.0.1:18789
+? Gateway URL: https://openclaw.tail1234.ts.net
 ? Hook token (from openclaw.json → hooks.token): ****
 
-? Vision provider for screen analysis:
-  ❯ Skip — OpenClaw imageModel already configured
-    Add fallback vision provider
-
 ✓ Gateway connection successful
-✓ Webhook endpoint active
 
+[!] Remote mode detected.
+    OpenWeruh components will be installed on the remote server
+    after gateway connection is verified.
+
+┌─ Screen Analysis ──────────────────────────────────────────────────┐
+? How should screen content be analyzed?
+  ❯ OpenClaw imageModel (recommended)
+    Text-Only Mode: OCR (no LLM needed)
+    Text-Only Mode: Vision API
+
+✓ Remote install triggered (agent will execute commands)
 OpenWeruh is ready. Run: python daemon/weruh.py start
 ```
+
+**Remote install flow (Mode B / C):**  
+When a remote gateway is detected, the installer sends install instructions via the OpenClaw webhook to the agent session. The OpenClaw agent — running on the server — receives the message and executes the install commands via its `exec` tool:
+
+```bash
+git clone https://github.com/fikriaf/OpenWeruh.git
+npx clawhub install openweruh --no-input
+openclaw hooks install OpenWeruh/hook/weruh-boot
+```
+
+This means OpenWeruh components are installed **by OpenClaw itself** on the server — no SSH, no manual file transfer needed.
 
 ---
 
@@ -983,7 +999,7 @@ channels.telegram.dmPolicy = "open"
 **Fix:** Adjust `weruh.yaml`:
 ```yaml
 capture:
-  interval_seconds: 30
+  interval_seconds: 60
   change_threshold: 15
   active_hours: "09:00-18:00"
 ```
@@ -1070,19 +1086,17 @@ openweruh/
 
 ```bash
 # One-line install
-curl -fsSL https://raw.githubusercontent.com/[username]/openweruh/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/fikriaf/OpenWeruh/main/scripts/install.sh | bash
 
 # Or manually
-git clone https://github.com/[username]/openweruh
-cd openweruh
+git clone https://github.com/fikriaf/OpenWeruh.git
+cd OpenWeruh
 pip install -r daemon/requirements.txt
 cp config/weruh.example.yaml ~/.config/openweruh/weruh.yaml
 
 # Register skill & hook with OpenClaw
-clawhub install openweruh             # if already published to ClawHub
-# or
-cp -r skill/openweruh ~/.openclaw/skills/
-cp -r hook/weruh-boot ~/.openclaw/hooks/
+npx clawhub install openweruh --no-input
+openclaw hooks install hook/weruh-boot
 
 # Start the daemon
 python daemon/weruh.py start

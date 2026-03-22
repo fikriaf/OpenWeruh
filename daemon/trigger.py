@@ -68,7 +68,8 @@ def trigger_agent_with_text(text_description: str, config: Dict) -> bool:
         "message": f"[WERUH] Screen context: {text_description}",
         "name": "OpenWeruh",
         "sessionKey": "hook:weruh:text",
-        "deliver": False,
+        "wakeMode": "now",
+        "deliver": True,
         "channel": "last",
     }
 
