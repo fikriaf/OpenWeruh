@@ -30,7 +30,7 @@ RESET = "\033[0m"
 # ASCII art split into individual word rows.
 # Each line is split at the natural gap between "OPEN" and "WERUH".
 # The banner is 87 chars wide; "OPEN" occupies cols 0-43, "WERUH" cols 44+.
-SPLIT = 39  # character index where WERUH starts
+SPLIT = 40  # character index where WERUH starts
 
 BANNER_LINES = [
     r" $$$$$$\  $$$$$$$\  $$$$$$$$\ $$\   $$\ $$\      $$\ $$$$$$$$\ $$$$$$$\  $$\   $$\ $$\   $$\ ",
