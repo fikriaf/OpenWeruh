@@ -208,10 +208,39 @@ def _install_openclaw_components(config: Dict):
         with httpx.Client(timeout=15) as client:
             response = client.post(f"{url}/hooks/agent", json=data, headers=headers)
             if response.status_code >= 400:
-                return f"Install trigger failed: HTTP {response.status_code}"
-            return "Install triggered (agent will execute commands)"
+                return (None, f"Install trigger failed: HTTP {response.status_code}")
+            return ("ok", None)
     except httpx.RequestError as e:
-        return f"Install webhook failed: {e}"
+        return (None, f"Install webhook failed: {e}")
+
+
+def _show_install_commands():
+    print()
+    print("  \033[36m────────────────────────────────────────────\033[0m")
+    print("  \033[1m  OpenClaw Component Installation\033[0m")
+    print("  \033[36m────────────────────────────────────────────\033[0m")
+    print()
+    print("  \033[33m!\033[0m  The commands below have been sent to OpenClaw agent.")
+    print("  \033[90m  Also paste them manually into OpenClaw (web UI / Telegram)")
+    print("  \033[90m  to ensure execution if the agent doesn't respond.\033[0m")
+    print()
+    print("  Run these commands IN ORDER:")
+    print()
+    print("  \033[32m1.\033[0m  git clone https://github.com/fikriaf/OpenWeruh.git")
+    print()
+    print("  \033[32m2.\033[0m  npx clawhub install openweruh --no-input")
+    print()
+    print("  \033[32m3.\033[0m  openclaw hooks install OpenWeruh/hook/weruh-boot")
+    print()
+    print(
+        "  \033[90m  If clawhub is not found, run first: npm install -g clawhub\033[0m"
+    )
+    print()
+    print("  \033[90m  After all succeed, confirm: openclaw hooks list\033[0m")
+    print("  \033[90m  Then restart gateway: openclaw gateway restart\033[0m")
+    print()
+    print("  \033[90m[Press Enter to continue...]\033[0m")
+    input()
 
 
 def _show_openclaw_notes():
@@ -326,9 +355,10 @@ def run_setup():
             print("\n  Please fix the gateway settings and run setup again.")
             sys.exit(1)
 
-        result = _install_openclaw_components(preflight_config)
-        if result:
-            print(f"\n  \033[32m[OK]\033[0m {result}")
+        ok, err = _install_openclaw_components(preflight_config)
+        if err:
+            print(f"\n  \033[91m[X]\033[0m {err}")
+        _show_install_commands()
 
         _section("Screen Analysis")
 
