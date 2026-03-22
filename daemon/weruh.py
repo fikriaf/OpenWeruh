@@ -11,6 +11,16 @@ from vision import VisionProviderAdapter
 from ocr import OCRProcessor
 
 
+def _cfg(d, *keys, default=None):
+    for k in keys:
+        if d is None:
+            return default
+        d = d.get(k)
+        if d is None:
+            return default
+    return d
+
+
 def setup_windows_ansi():
     if sys.platform == "win32":
         try:
@@ -395,9 +405,9 @@ def run_setup():
 
         current_analysis = None
         if existing:
-            if existing.get("ocr", {}).get("enabled"):
+            if _cfg(existing, "ocr", "enabled"):
                 current_analysis = 1
-            elif existing.get("vision", {}).get("provider", {}).get("type"):
+            elif _cfg(existing, "vision", "provider", "type"):
                 current_analysis = 2
             else:
                 current_analysis = 0
@@ -409,16 +419,15 @@ def run_setup():
         config["vision"] = {"provider": {}}
 
         if vision_idx == 0:
-            config["ocr"] = (
-                existing.get("ocr", {"enabled": False})
-                if existing
-                else {"enabled": False}
-            )
-            config["vision"] = (
-                existing.get("vision", {"provider": {}})
-                if existing
-                else {"provider": {}}
-            )
+            config["ocr"] = {"enabled": False}
+            config["vision"] = {"provider": {}}
+            if existing:
+                e_ocr = existing.get("ocr")
+                e_vision = existing.get("vision")
+                if e_ocr:
+                    config["ocr"] = e_ocr
+                if e_vision:
+                    config["vision"] = e_vision
             print("\n  \033[32m[OK]\033[0m OpenClaw will receive raw images.")
 
         elif vision_idx == 1:
@@ -428,11 +437,9 @@ def run_setup():
             ]
             current_lib = (
                 0
-                if (
-                    existing and existing.get("ocr", {}).get("library") == "pytesseract"
-                )
+                if (existing and _cfg(existing, "ocr", "library") == "pytesseract")
                 else 1
-                if (existing and existing.get("ocr", {}).get("library") == "easyocr")
+                if (existing and _cfg(existing, "ocr", "library") == "easyocr")
                 else None
             )
             lib_idx = _choice("Choose an OCR library:", ocr_libs, current=current_lib)
@@ -456,7 +463,7 @@ def run_setup():
                     sys.exit(1)
 
             current_lang = (
-                existing.get("ocr", {}).get("lang", "eng+ind")
+                _cfg(existing, "ocr", "lang", default="eng+ind")
                 if existing
                 else "eng+ind"
             )
@@ -483,8 +490,7 @@ def run_setup():
                     (
                         i
                         for i, p in enumerate(providers)
-                        if p[0]
-                        == existing.get("vision", {}).get("provider", {}).get("type")
+                        if p[0] == _cfg(existing, "vision", "provider", "type")
                     ),
                     None,
                 )
@@ -497,19 +503,11 @@ def run_setup():
             ptype = providers[p_idx][0]
 
             current_model = (
-                existing.get("vision", {}).get("provider", {}).get("model", "")
-                if existing
-                else ""
+                _cfg(existing, "vision", "provider", "model", default="") or ""
             )
-            current_url = (
-                existing.get("vision", {}).get("provider", {}).get("url", "")
-                if existing
-                else ""
-            )
+            current_url = _cfg(existing, "vision", "provider", "url", default="") or ""
             current_key = (
-                existing.get("vision", {}).get("provider", {}).get("api_key", "")
-                if existing
-                else ""
+                _cfg(existing, "vision", "provider", "api_key", default="") or ""
             )
 
             model = _text(f"Model name [{current_model}]: ", default=current_model)
@@ -545,10 +543,7 @@ def run_setup():
                     "Yes \u2014 add fallback (recommended)",
                 ],
                 current=1
-                if (
-                    existing
-                    and existing.get("vision", {}).get("provider", {}).get("type")
-                )
+                if (existing and _cfg(existing, "vision", "provider", "type"))
                 else 0,
             )
 
@@ -570,10 +565,7 @@ def run_setup():
                         (
                             i
                             for i, p in enumerate(providers)
-                            if p[0]
-                            == existing.get("vision", {})
-                            .get("provider", {})
-                            .get("type")
+                            if p[0] == _cfg(existing, "vision", "provider", "type")
                         ),
                         None,
                     )
@@ -586,19 +578,11 @@ def run_setup():
                 fbtype = providers[fb_idx][0]
 
                 fb_model = (
-                    existing.get("vision", {}).get("provider", {}).get("model", "")
-                    if existing
-                    else ""
+                    _cfg(existing, "vision", "provider", "model", default="") or ""
                 )
-                fb_url = (
-                    existing.get("vision", {}).get("provider", {}).get("url", "")
-                    if existing
-                    else ""
-                )
+                fb_url = _cfg(existing, "vision", "provider", "url", default="") or ""
                 fb_key = (
-                    existing.get("vision", {}).get("provider", {}).get("api_key", "")
-                    if existing
-                    else ""
+                    _cfg(existing, "vision", "provider", "api_key", default="") or ""
                 )
 
                 fb_model_in = _text(f"Model name [{fb_model}]: ", default=fb_model)
@@ -649,7 +633,7 @@ def run_setup():
         gw_url = config["gateway"].get("url", "")
         gw_mode = display_mode
         analysis = display_vision
-        has_fb = config.get("vision", {}).get("provider", {}).get("type")
+        has_fb = _cfg(config, "vision", "provider", "type")
         fb_val = (
             f"\033[36mYes \u2014 {has_fb}\033[0m" if has_fb else "\033[90mNone\033[0m"
         )
