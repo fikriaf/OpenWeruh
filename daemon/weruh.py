@@ -21,23 +21,6 @@ def setup_windows_ansi():
             pass
 
 
-def get_choice(prompt, choices):
-    print(prompt)
-    for i, choice in enumerate(choices, 1):
-        print(f"  {i}) {choice}")
-    while True:
-        try:
-            val = int(input(f"\nSelect an option (1-{len(choices)}): "))
-            if 1 <= val <= len(choices):
-                return val - 1
-            print("  Invalid choice. Try again.")
-        except ValueError:
-            print("  Please enter a number.")
-        except KeyboardInterrupt:
-            print("\n\nSetup cancelled.")
-            sys.exit(1)
-
-
 RED_ORANGE = "\033[38;2;255;90;20m"
 INDIGO = "\033[38;2;63;0;255m"
 RESET = "\033[0m"
@@ -130,168 +113,305 @@ def test_gateway_connection(url, token):
         return False
 
 
+def _section(title):
+    print()
+    print(f"  \033[1m── {title} {'─' * max(0, 52 - len(title))}\033[0m")
+
+
+def _choice(prompt, choices, current=None):
+    print(f"\n  {prompt}")
+    for i, c in enumerate(choices):
+        marker = "\033[32m*\033[0m" if (current is not None and i == current) else " "
+        print(f"    [{marker}] {i + 1}) {c}")
+    while True:
+        try:
+            val = input(
+                f"    (1-{len(choices)}) [{current + 1 if current is not None else ''}]: "
+            ).strip()
+            if not val:
+                return current if current is not None else 0
+            n = int(val)
+            if 1 <= n <= len(choices):
+                return n - 1
+            print("    Invalid. Enter a number.")
+        except ValueError:
+            print("    Enter a number.")
+        except KeyboardInterrupt:
+            print("\n\nSetup cancelled.")
+            sys.exit(1)
+
+
+def _text(prompt, default=""):
+    val = input(f"  {prompt}").strip()
+    return val or default
+
+
+def _password(prompt, default_masked="***"):
+    while True:
+        try:
+            val = getpass.getpass(f"  {prompt}").strip()
+            if val:
+                return val
+            return None
+        except KeyboardInterrupt:
+            print("\n\nSetup cancelled.")
+            sys.exit(1)
+
+
 def run_setup():
     print_banner()
+
+    config_dir = os.path.expanduser("~/.config/openweruh")
+    config_path = os.path.join(config_dir, "weruh.yaml")
+    existing = None
+
+    if os.path.exists(config_path):
+        print(f"  \033[90mExisting config found at {config_path}")
+        print("  Press Enter on each field to keep the current value.\033[0m")
+        with open(config_path) as f:
+            existing = yaml.safe_load(f)
+    else:
+        print("  \033[90mNo existing config found. Creating new configuration.\033[0m")
+
+    config = {
+        "gateway": {},
+        "persona": {
+            "mode": "skeptic",
+            "language": "en",
+            "tone": "casual",
+            "intervention_threshold": "medium",
+        },
+        "capture": {
+            "interval_seconds": 15,
+            "change_threshold": 10,
+            "active_hours": "07:00-23:00",
+            "notify_after_idle_minutes": 5,
+        },
+    }
+
     try:
-        while True:
-            gw_idx = get_choice(
-                "? Where is your OpenClaw Gateway running?",
-                [
-                    "On this same machine (local)",
-                    "On a remote server (SSH tunnel)",
-                    "On a remote server (public URL / Tailscale)",
-                ],
-            )
-            mode = ["local", "tunnel", "remote"][gw_idx]
-            default_url = "http://127.0.0.1:18789" if mode != "remote" else "https://"
-            url = input(f"? Gateway URL [{default_url}]: ").strip() or default_url
-            token = getpass.getpass(
-                "? Hook token (from openclaw.json \u2192 hooks.token): "
-            ).strip()
-            if not token:
-                print("  [X] Hook token cannot be empty!\n")
-                continue
+        _section("Gateway")
 
-            if test_gateway_connection(url, token):
-                break
-            print("\nLet's try configuring the Gateway again.\n")
+        modes = [
+            "On this same machine (local)",
+            "On a remote server (SSH tunnel)",
+            "On a remote server (public URL / Tailscale)",
+        ]
+        mode_labels = ["local", "tunnel", "remote"]
+        current_mode = (
+            mode_labels.index(existing["gateway"]["mode"])
+            if existing and existing.get("gateway", {}).get("mode") in mode_labels
+            else None
+        )
+        gw_idx = _choice(
+            "Where is your OpenClaw Gateway running?", modes, current=current_mode
+        )
+        config["gateway"]["mode"] = mode_labels[gw_idx]
 
-        config = {
-            "gateway": {"mode": mode, "url": url, "hook_token": token},
-            "persona": {
-                "mode": "skeptic",
-                "language": "en",
-                "tone": "casual",
-                "intervention_threshold": "medium",
-            },
-            "capture": {
-                "interval_seconds": 15,
-                "change_threshold": 10,
-                "active_hours": "07:00-23:00",
-                "notify_after_idle_minutes": 5,
-            },
-        }
-
-        print()
-        vision_idx = get_choice(
-            "? How should screen content be analyzed?",
-            [
-                "OpenClaw has a vision-capable AI model (send image directly \u2014 recommended)",
-                "Text-Only Mode: extract visible TEXT via OCR library (no LLM needed)",
-                "Text-Only Mode: use Vision API/LLM to DESCRIBE the screen (fallback if OpenClaw fails)",
-            ],
+        default_url = (
+            "http://127.0.0.1:18789"
+            if gw_idx == 0
+            else ("https://" if gw_idx == 2 else "")
+        )
+        config["gateway"]["url"] = _text(
+            f"Gateway URL [{existing['gateway']['url'] if existing and existing.get('gateway', {}).get('url') else default_url}]: ",
+            default=existing["gateway"]["url"]
+            if existing and existing.get("gateway", {}).get("url")
+            else default_url,
         )
 
+        masked = (
+            "***...***"
+            if existing and existing.get("gateway", {}).get("hook_token")
+            else ""
+        )
+        print(f"  Hook token (from openclaw.json \u2192 hooks.token)")
+        print(f"    \033[90m[Enter to keep: {masked}]\033[0m")
+        new_token = getpass.getpass("    (leave empty to keep existing): ").strip()
+        if new_token:
+            config["gateway"]["hook_token"] = new_token
+        elif existing and existing.get("gateway", {}).get("hook_token"):
+            config["gateway"]["hook_token"] = existing["gateway"]["hook_token"]
+        else:
+            print("  \033[91m[X] Hook token is required.\033[0m")
+            sys.exit(1)
+
+        if not test_gateway_connection(
+            config["gateway"]["url"], config["gateway"]["hook_token"]
+        ):
+            print("\n  Please fix the gateway settings and run setup again.")
+            sys.exit(1)
+
+        _section("Screen Analysis")
+
+        analysis = [
+            "OpenClaw has a vision-capable AI model (send image directly \u2014 recommended)",
+            "Text-Only Mode: OCR (extract visible TEXT \u2014 no LLM needed)",
+            "Text-Only Mode: Vision API (describe screen via LLM)",
+        ]
+
+        current_analysis = None
+        if existing:
+            if existing.get("ocr", {}).get("enabled"):
+                current_analysis = 1
+            elif existing.get("vision", {}).get("provider", {}).get("type"):
+                current_analysis = 2
+            else:
+                current_analysis = 0
+
+        vision_idx = _choice(
+            "How should screen content be analyzed?", analysis, current=current_analysis
+        )
+        config["ocr"] = {"enabled": False}
+        config["vision"] = {"provider": {}}
+
         if vision_idx == 0:
-            print("  [OK] OpenClaw will receive raw images.")
-            print(
-                "       Make sure your OpenClaw is configured with a vision-capable imageModel."
+            config["ocr"] = (
+                existing.get("ocr", {"enabled": False})
+                if existing
+                else {"enabled": False}
             )
-            print(
-                "       Daemon will auto-fallback to vision.provider if OpenClaw returns an error."
+            config["vision"] = (
+                existing.get("vision", {"provider": {}})
+                if existing
+                else {"provider": {}}
             )
+            print("\n  \033[32m[OK]\033[0m OpenClaw will receive raw images.")
 
         elif vision_idx == 1:
-            print()
-            ocr_lib_idx = get_choice(
-                "? Choose an OCR library:",
-                [
-                    "Tesseract OCR (pytesseract) \u2014 fastest",
-                    "EasyOCR \u2014 better for complex layouts, slower",
-                ],
+            ocr_libs = [
+                "Tesseract OCR (pytesseract) \u2014 fastest",
+                "EasyOCR \u2014 better for complex layouts",
+            ]
+            current_lib = (
+                0
+                if (
+                    existing and existing.get("ocr", {}).get("library") == "pytesseract"
+                )
+                else 1
+                if (existing and existing.get("ocr", {}).get("library") == "easyocr")
+                else None
             )
-            ocr_lib = "pytesseract" if ocr_lib_idx == 0 else "easyocr"
+            lib_idx = _choice("Choose an OCR library:", ocr_libs, current=current_lib)
+            ocr_lib = "pytesseract" if lib_idx == 0 else "easyocr"
 
             if ocr_lib == "pytesseract":
-                try:
-                    import shutil
+                import shutil
 
-                    if not shutil.which("tesseract") and not os.path.exists(
-                        r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-                    ):
-                        print()
-                        print("  [X] Tesseract OCR is not installed!")
-                        print()
-                        print("  Install Tesseract OCR first:")
-                        print("    Windows: choco install tesseract -y")
-                        print(
-                            "            OR download from https://github.com/UB-Mannheim/tesseract/wiki"
-                        )
-                        print("    macOS:   brew install tesseract")
-                        print("    Linux:   sudo apt install tesseract-ocr")
-                        print()
-                        print("  After installing, run setup again.")
-                        sys.exit(1)
-                except Exception:
-                    pass
+                if not shutil.which("tesseract") and not os.path.exists(
+                    r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+                ):
+                    print("\n  \033[91m[X] Tesseract OCR is not installed!\033[0m")
+                    print("\n  Install Tesseract OCR first:")
+                    print("    Windows: choco install tesseract -y")
+                    print(
+                        "            OR https://github.com/UB-Mannheim/tesseract/wiki"
+                    )
+                    print("    macOS:   brew install tesseract")
+                    print("    Linux:   sudo apt install tesseract-ocr")
+                    print("\n  After installing, run setup again.")
+                    sys.exit(1)
 
-            lang = (
-                input(
-                    "? OCR language codes (e.g. eng, eng+ind, eng+ara) [eng+ind]: "
-                ).strip()
-                or "eng+ind"
+            current_lang = (
+                existing.get("ocr", {}).get("lang", "eng+ind")
+                if existing
+                else "eng+ind"
             )
+            lang = _text(f"OCR language codes [{current_lang}]: ", default=current_lang)
 
-            config["ocr"] = {
-                "enabled": True,
-                "library": ocr_lib,
-                "lang": lang,
-            }
-            config["vision"] = {"provider": {}}
-            print(
-                f"\n  [OK] Text-Only Mode enabled using {ocr_lib}. OpenClaw will receive plain text."
-            )
+            config["ocr"] = {"enabled": True, "library": ocr_lib, "lang": lang}
+            print(f"\n  \033[32m[OK]\033[0m OCR Text-Only Mode enabled ({ocr_lib}).")
 
         elif vision_idx == 2:
-            print()
             providers = [
                 ("ollama", "Ollama (local, full privacy)"),
-                ("openai", "OpenAI (GPT-4o / GPT-4.1)"),
-                ("anthropic", "Anthropic (Claude Sonnet / Haiku)"),
-                ("google", "Google (Gemini Flash / Pro)"),
-                ("openrouter", "OpenRouter (access 200+ models)"),
+                ("openai", "OpenAI (GPT-4o)"),
+                ("anthropic", "Anthropic (Claude Sonnet)"),
+                ("google", "Google (Gemini Flash)"),
+                ("openrouter", "OpenRouter (200+ models)"),
                 ("mistral", "Mistral (Pixtral)"),
-                ("together", "Together AI (Llama Vision)"),
-                ("xai", "xAI (Grok Vision)"),
-                ("custom", "Custom / Self-hosted (LiteLLM, vLLM, Azure, etc.)"),
+                ("together", "Together AI"),
+                ("xai", "xAI (Grok)"),
+                ("custom", "Custom / Self-hosted"),
             ]
-            p_idx = get_choice("? Choose a vision provider:", [p[1] for p in providers])
-            provider_type = providers[p_idx][0]
-
-            api_key = ""
-            if provider_type != "ollama":
-                api_key = getpass.getpass(f"? {provider_type.capitalize()} API Key: ")
-
-            model = input("? Model name (e.g. gemini-2.5-flash, llava:13b): ").strip()
-            override_url = input("? Override URL? (leave empty for default): ").strip()
-
-            config["vision"] = {
-                "provider": {
-                    "type": provider_type,
-                    "api_key": api_key,
-                    "model": model,
-                    "url": override_url,
-                },
-            }
-            print(f"\n  [OK] Vision provider ({provider_type}) configured.")
-
-        if vision_idx in [0, 2]:
-            print()
-            use_fb = (
-                get_choice(
-                    "? Configure a fallback Vision Provider for when OpenClaw image pipeline fails?",
-                    [
-                        "No \u2014 only use OpenClaw directly (skip frame on failure)",
-                        "Yes \u2014 add Ollama / API as fallback (recommended)",
-                    ],
+            p_labels = [p[1] for p in providers]
+            current_ptype = (
+                next(
+                    (
+                        i
+                        for i, p in enumerate(providers)
+                        if p[0]
+                        == existing.get("vision", {}).get("provider", {}).get("type")
+                    ),
+                    None,
                 )
-                == 1
+                if existing
+                else None
+            )
+            p_idx = _choice(
+                "Choose a vision provider:", p_labels, current=current_ptype
+            )
+            ptype = providers[p_idx][0]
+
+            current_model = (
+                existing.get("vision", {}).get("provider", {}).get("model", "")
+                if existing
+                else ""
+            )
+            current_url = (
+                existing.get("vision", {}).get("provider", {}).get("url", "")
+                if existing
+                else ""
+            )
+            current_key = (
+                existing.get("vision", {}).get("provider", {}).get("api_key", "")
+                if existing
+                else ""
             )
 
-            if use_fb:
-                print()
+            model = _text(f"Model name [{current_model}]: ", default=current_model)
+            override_url = _text(
+                f"Override URL (leave empty for default) [{current_url}]: ",
+                default=current_url,
+            )
+            api_key = ""
+            if ptype != "ollama":
+                masked_key = "***...***" if current_key else ""
+                print(f"  API Key")
+                if masked_key:
+                    print(f"    \033[90m[Enter to keep: {masked_key}]\033[0m")
+                api_key = getpass.getpass("    (leave empty to keep): ").strip()
+                if not api_key and current_key:
+                    api_key = current_key
+
+            config["vision"]["provider"] = {
+                "type": ptype,
+                "api_key": api_key,
+                "model": model,
+                "url": override_url,
+            }
+            print(f"\n  \033[32m[OK]\033[0m Vision provider configured ({ptype}).")
+
+        if vision_idx in [0, 2]:
+            _section("Fallback Vision Provider")
+
+            use_fb = _choice(
+                "Add a fallback Vision Provider for when OpenClaw image pipeline fails?",
+                [
+                    "No \u2014 skip frame on failure",
+                    "Yes \u2014 add fallback (recommended)",
+                ],
+                current=1
+                if (
+                    existing
+                    and existing.get("vision", {}).get("provider", {}).get("type")
+                )
+                else 0,
+            )
+
+            if use_fb == 1:
                 providers = [
-                    ("ollama", "Ollama (local, full privacy)"),
+                    ("ollama", "Ollama (local)"),
                     ("openai", "OpenAI"),
                     ("anthropic", "Anthropic"),
                     ("google", "Google Gemini"),
@@ -301,35 +421,107 @@ def run_setup():
                     ("xai", "xAI"),
                     ("custom", "Custom / Self-hosted"),
                 ]
-                p_idx = get_choice(
-                    "? Choose fallback provider:", [p[1] for p in providers]
-                )
-                provider_type = providers[p_idx][0]
-
-                api_key = ""
-                if provider_type != "ollama":
-                    api_key = getpass.getpass(
-                        f"? {provider_type.capitalize()} API Key: "
+                fb_labels = [p[1] for p in providers]
+                current_fb = (
+                    next(
+                        (
+                            i
+                            for i, p in enumerate(providers)
+                            if p[0]
+                            == existing.get("vision", {})
+                            .get("provider", {})
+                            .get("type")
+                        ),
+                        None,
                     )
+                    if existing
+                    else 0
+                )
+                fb_idx = _choice(
+                    "Choose fallback provider:", fb_labels, current=current_fb
+                )
+                fbtype = providers[fb_idx][0]
 
-                model = input("? Model name: ").strip()
-                override_url = input(
-                    "? Override URL? (leave empty for default): "
-                ).strip()
+                fb_model = (
+                    existing.get("vision", {}).get("provider", {}).get("model", "")
+                    if existing
+                    else ""
+                )
+                fb_url = (
+                    existing.get("vision", {}).get("provider", {}).get("url", "")
+                    if existing
+                    else ""
+                )
+                fb_key = (
+                    existing.get("vision", {}).get("provider", {}).get("api_key", "")
+                    if existing
+                    else ""
+                )
 
-                config.setdefault("vision", {"provider": {}})
+                fb_model_in = _text(f"Model name [{fb_model}]: ", default=fb_model)
+                fb_url_in = _text(
+                    f"Override URL (leave empty for default) [{fb_url}]: ",
+                    default=fb_url,
+                )
+                fb_api_key = ""
+                if fbtype != "ollama":
+                    masked_kb = "***...***" if fb_key else ""
+                    print(f"  API Key")
+                    if masked_kb:
+                        print(f"    \033[90m[Enter to keep: {masked_kb}]\033[0m")
+                    fb_api_key = getpass.getpass("    (leave empty to keep): ").strip()
+                    if not fb_api_key and fb_key:
+                        fb_api_key = fb_key
+
                 config["vision"]["provider"] = {
-                    "type": provider_type,
-                    "api_key": api_key,
-                    "model": model,
-                    "url": override_url,
+                    "type": fbtype,
+                    "api_key": fb_api_key,
+                    "model": fb_model_in,
+                    "url": fb_url_in,
                 }
-                print(f"\n  [OK] Fallback provider ({provider_type}) configured.")
+                print(
+                    f"\n  \033[32m[OK]\033[0m Fallback provider configured ({fbtype})."
+                )
 
-        config_dir = os.path.expanduser("~/.config/openweruh")
+        _section("Summary")
+
+        mode_labels_display = {
+            "local": "Local",
+            "tunnel": "SSH Tunnel",
+            "remote": "Remote",
+        }
+        display_mode = mode_labels_display.get(
+            config["gateway"]["mode"], config["gateway"]["mode"]
+        )
+        display_vision = (
+            "OpenClaw image"
+            if vision_idx == 0
+            else (
+                f"OCR ({config.get('ocr', {}).get('library', '?')})"
+                if vision_idx == 1
+                else f"Vision API ({config.get('vision', {}).get('provider', {}).get('type', '?')})"
+            )
+        )
+
+        print(f"  Gateway URL:  \033[1m{config['gateway']['url']}\033[0m")
+        print(f"  Gateway mode: \033[1m{display_mode}\033[0m")
+        print(f"  Analysis:     \033[1m{display_vision}\033[0m")
+        has_fb = config.get("vision", {}).get("provider", {}).get("type")
+        print(
+            f"  Fallback:     \033[1m{'Yes — ' + has_fb if has_fb else 'None'}\033[0m"
+        )
+
+        print("\n  Save this configuration?")
+        confirm = _choice(
+            "",
+            ["Yes — save and exit", "No — cancel"],
+            current=0,
+        )
+        if confirm != 0:
+            print("\n  Setup cancelled.")
+            sys.exit(0)
+
         os.makedirs(config_dir, exist_ok=True)
-        config_path = os.path.join(config_dir, "weruh.yaml")
-
         with open(config_path, "w") as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
@@ -338,11 +530,11 @@ def run_setup():
         except OSError:
             pass
 
-        print(f"\n  [OK] Configuration saved to {config_path}")
-        print("  [OK] OpenWeruh is ready. Run: python daemon/weruh.py start\n")
+        print(f"\n  \033[32m[OK]\033[0m Configuration saved to {config_path}")
+        print("  \033[32m[OK]\033[0m Run: python daemon/weruh.py start\n")
 
     except KeyboardInterrupt:
-        print("\nSetup cancelled.")
+        print("\n\nSetup cancelled.")
         sys.exit(1)
 
     sys.exit(0)
