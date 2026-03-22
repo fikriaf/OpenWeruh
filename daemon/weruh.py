@@ -158,13 +158,8 @@ def _password(prompt, default_masked="***"):
             sys.exit(1)
 
 
-def _show_openclaw_notes():
+def _install_openclaw_components():
     import shutil
-
-    print_banner()
-    print()
-    print("  \033[33m[!] OpenClaw must be prepared before OpenWeruh setup.\033[0m")
-    print()
 
     skill_src = os.path.join(os.path.dirname(__file__), "..", "skill", "openweruh")
     hook_src = os.path.join(os.path.dirname(__file__), "..", "hook", "weruh-boot")
@@ -200,33 +195,18 @@ def _show_openclaw_notes():
                 pass
 
     if copied:
-        print(f"  \033[32m[OK]\033[0m Installed: {', '.join(copied)}")
-
-    print()
-    print("  \033[90mOpenClaw config — run these if you see errors:\033[0m")
-    print()
-    print("  If 'unknown entries (image)' appears:")
-    print(
-        "    Your agent tool allowlist includes 'image' but your LLM doesn't support vision."
-    )
-    print('    Option A: openclaw config set tools.profile "minimal"')
-    print(
-        '    Option B: openclaw config set tools.profile.allowlist "shell,grep,file.read,code"'
-    )
-    print()
-    print("  If 'Skipping skill path' appears:")
-    print("    A junction or symlink may still exist. Run setup again — it will")
-    print("    remove the junction and copy the folder fresh.")
-    print()
-    print("    Restart OpenClaw manually after changing the config.")
-    print()
-    print("  \033[90m[Press Enter to continue with OpenWeruh setup...]\033[0m")
-    input()
-    print()
+        return f"Installed: {', '.join(copied)}"
+    return None
 
 
 def run_setup():
-    _show_openclaw_notes()
+    print_banner()
+
+    result = _install_openclaw_components()
+    if result:
+        print(f"  \033[32m[OK]\033[0m {result}\n")
+    else:
+        print()
 
     config_dir = os.path.expanduser("~/.config/openweruh")
     config_path = os.path.join(config_dir, "weruh.yaml")
