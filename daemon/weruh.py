@@ -66,42 +66,48 @@ def _read_key():
 
 def get_choice(prompt, choices):
     setup_windows_ansi()
-    selected = 0
+    selected = [0]
+
+    def clear_menu():
+        for _ in range(len(choices) + 3):
+            sys.stdout.write("\033[1A\033[2K")
 
     def render():
-        sys.stdout.write("\x0c")
-        print()
-        for line in BANNER_LINES:
-            print(colorize_line(line))
+        clear_menu()
         print()
         print(f"  {prompt}")
         print()
         for i, choice in enumerate(choices):
-            arrow = "\033[36m>\033[0m " if i == selected else "  "
-            print(f"  {arrow}{choice}")
+            marker = "\033[36m>\033[0m " if i == selected[0] else "  "
+            print(f"  {marker}{choice}")
         print()
         print(
             "  \033[90m[\u2191\u2193 navigate   \033[36mEnter\033[0m\033[90m confirm\033[0m"
         )
-        sys.stdout.flush()
 
-    render()
+    print()
+    print(f"  {prompt}")
+    print()
+    for i, choice in enumerate(choices):
+        marker = "\033[36m>\033[0m " if i == selected[0] else "  "
+        print(f"  {marker}{choice}")
+    print()
+    print(
+        "  \033[90m[\u2191\u2193 navigate   \033[36mEnter\033[0m\033[90m confirm\033[0m"
+    )
+
     while True:
         try:
             key = _read_key()
             if key == "up":
-                selected = (selected - 1) % len(choices)
-                sys.stdout.write("\r")
-                sys.stdout.flush()
+                selected[0] = (selected[0] - 1) % len(choices)
                 render()
             elif key == "down":
-                selected = (selected + 1) % len(choices)
-                sys.stdout.write("\r")
-                sys.stdout.flush()
+                selected[0] = (selected[0] + 1) % len(choices)
                 render()
             elif key == "enter":
                 print()
-                return selected
+                return selected[0]
         except KeyboardInterrupt:
             print("\n\nSetup cancelled.")
             sys.exit(1)
@@ -200,6 +206,7 @@ def test_gateway_connection(url, token):
 
 
 def run_setup():
+    print_banner()
     try:
         while True:
             gw_idx = get_choice(
