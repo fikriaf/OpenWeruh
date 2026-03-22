@@ -158,8 +158,137 @@ def _password(prompt, default_masked="***"):
             sys.exit(1)
 
 
+def _preflight_check():
+    issues = []
+
+    if sys.platform == "win32":
+        claw_dir = os.path.join(os.environ.get("USERPROFILE", ""), ".openclaw")
+    else:
+        claw_dir = os.path.expanduser("~/.openclaw")
+    claw_config = os.path.join(claw_dir, "openclaw.json")
+
+    if os.path.exists(claw_config):
+        try:
+            with open(claw_config) as f:
+                content = f.read()
+                if "tools.profile" in content:
+                    import json
+
+                    cfg = json.loads(content)
+                    profile = cfg.get("tools", {}).get("profile", "")
+                    if profile == "coding":
+                        issues.append(
+                            "OpenClaw tools.profile is set to 'coding' which may cause "
+                            "'unknown entries (image)' errors with text-only models."
+                        )
+                    if "plugins" in cfg:
+                        plugins = cfg.get("plugins", {})
+                        entries = plugins.get("entries", {})
+                        if "openweruh" in entries:
+                            issues.append(
+                                "OpenClaw plugins.entries has a stale 'openweruh' entry "
+                                "that will cause a warning on every startup."
+                            )
+        except Exception:
+            pass
+
+    skill_src = os.path.join(os.path.dirname(__file__), "..", "skill", "openweruh")
+    hook_src = os.path.join(os.path.dirname(__file__), "..", "hook", "weruh-boot")
+    if not (os.path.exists(skill_src) and os.path.exists(hook_src)):
+        return issues
+
+    skill_dest = os.path.join(claw_dir, "skills", "openweruh")
+    hook_dest = os.path.join(claw_dir, "hooks", "weruh-boot")
+
+    missing = []
+    if not os.path.exists(skill_dest):
+        missing.append("skill/openweruh")
+    if not os.path.exists(hook_dest):
+        missing.append("hook/weruh-boot")
+
+    if missing:
+        issues.append(
+            "OpenWeruh " + " and ".join(missing) + " not found in OpenClaw directories."
+        )
+
+    if not issues:
+        return issues
+
+    print_banner()
+    print()
+    print("  \033[33m[!] Pre-flight check found issues:\033[0m")
+    for i, issue in enumerate(issues, 1):
+        print(f"  {i}) {issue}")
+    print()
+    fix_now = input("  Fix issues now? (Y/n): ").strip().lower()
+    if fix_now in ("n", "no"):
+        print("  Skipped. You can fix these manually later.\n")
+        return issues
+
+    if sys.platform == "win32":
+        import shutil
+
+        if os.path.exists(claw_config):
+            try:
+                import json
+
+                cfg = json.loads(open(claw_config).read())
+                changed = False
+
+                if cfg.get("tools", {}).get("profile") == "coding":
+                    cfg.setdefault("tools", {})["profile"] = "minimal"
+                    changed = True
+                    print("  [OK] tools.profile changed to 'minimal'")
+
+                entries = cfg.get("plugins", {}).get("entries", {})
+                if "openweruh" in entries:
+                    del entries["openweruh"]
+                    cfg["plugins"]["entries"] = entries
+                    changed = True
+                    print("  [OK] Removed stale plugins.entries.openweruh")
+
+                if changed:
+                    with open(claw_config, "w") as f:
+                        json.dump(cfg, f, indent=2)
+                    print(
+                        "  [OK] OpenClaw config updated. Restart OpenClaw with: openclaw restart"
+                    )
+            except Exception as e:
+                print(f"  [!] Could not update OpenClaw config: {e}")
+                print("     Please fix manually.")
+
+        for src, dst in [(skill_src, skill_dest), (hook_src, hook_dest)]:
+            if os.path.exists(src) and not os.path.exists(dst):
+                try:
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    shutil.copytree(src, dst)
+                    print(
+                        f"  [OK] Copied {os.path.basename(src)} to OpenClaw directories."
+                    )
+                except Exception as e:
+                    print(f"  [!] Could not copy {src}: {e}")
+
+    else:
+        for src, dst in [(skill_src, skill_dest), (hook_src, hook_dest)]:
+            if os.path.exists(src) and not os.path.exists(dst):
+                try:
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    import shutil
+
+                    shutil.copytree(src, dst)
+                    print(
+                        f"  [OK] Copied {os.path.basename(src)} to OpenClaw directories."
+                    )
+                except Exception as e:
+                    print(f"  [!] Could not copy {src}: {e}")
+
+    print()
+    print("  Pre-flight complete. Continuing setup...\n")
+
+
 def run_setup():
     print_banner()
+    _preflight_check()
 
     config_dir = os.path.expanduser("~/.config/openweruh")
     config_path = os.path.join(config_dir, "weruh.yaml")
