@@ -199,14 +199,35 @@ def _install_openclaw_components():
     return None
 
 
+def _show_openclaw_notes():
+    print()
+    print(
+        "  \033[90m── OpenClaw Configuration (set via OpenClaw UI/CLI where it runs) ──\033[0m"
+    )
+    print()
+    print("  If OpenWeruh messages don't reach your Telegram/WhatsApp:")
+    print(
+        "    \u2192 OpenClaw UI \u2192 Channels \u2192 Telegram \u2192 DM Policy \u2192 set to 'open'"
+    )
+    print()
+    print("  If you see 'unknown entries (image)' errors:")
+    print("    \u2192 OpenClaw UI \u2192 tools.profile \u2192 set to 'minimal'")
+    print()
+    print("  If you see 'Skipping skill path' warnings:")
+    print("    \u2192 Make sure skill folder is copied (not symlinked/junctioned)")
+    print()
+    print("  \033[90m[Press Enter to continue with OpenWeruh setup...]\033[0m")
+    input()
+
+
 def run_setup():
     print_banner()
 
     result = _install_openclaw_components()
     if result:
-        print(f"  \033[32m[OK]\033[0m {result}\n")
-    else:
-        print()
+        print(f"  \033[32m[OK]\033[0m {result}")
+
+    _show_openclaw_notes()
 
     config_dir = os.path.expanduser("~/.config/openweruh")
     config_path = os.path.join(config_dir, "weruh.yaml")
