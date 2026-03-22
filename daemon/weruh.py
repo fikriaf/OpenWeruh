@@ -68,19 +68,15 @@ def get_choice(prompt, choices):
     setup_windows_ansi()
     selected = [0]
 
-    def clear_menu():
-        for _ in range(len(choices) + 3):
+    def clear_choices():
+        for _ in range(len(choices) + 1):
             sys.stdout.write("\033[1A\033[2K")
 
     def render():
-        clear_menu()
-        print()
-        print(f"  {prompt}")
-        print()
+        clear_choices()
         for i, choice in enumerate(choices):
             marker = "\033[36m>\033[0m " if i == selected[0] else "  "
             print(f"  {marker}{choice}")
-        print()
         print(
             "  \033[90m[\u2191\u2193 navigate   \033[36mEnter\033[0m\033[90m confirm\033[0m"
         )
@@ -88,13 +84,7 @@ def get_choice(prompt, choices):
     print()
     print(f"  {prompt}")
     print()
-    for i, choice in enumerate(choices):
-        marker = "\033[36m>\033[0m " if i == selected[0] else "  "
-        print(f"  {marker}{choice}")
-    print()
-    print(
-        "  \033[90m[\u2191\u2193 navigate   \033[36mEnter\033[0m\033[90m confirm\033[0m"
-    )
+    render()
 
     while True:
         try:
