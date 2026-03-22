@@ -108,25 +108,47 @@ def test_gateway_connection(url: str, token: str) -> bool:
 
     try:
         with httpx.Client(timeout=5) as client:
-            # We send an empty JSON payload. The gateway should return 400 Bad Request if auth passes,
-            # or 401/403 if auth fails.
+            payload = {
+                "message": "[WERUH] Connection test",
+                "name": "OpenWeruh Setup",
+                "channel": "last",
+            }
             response = client.post(
-                f"{url.rstrip('/')}/hooks/agent", json={}, headers=headers
+                f"{url.rstrip('/')}/hooks/agent", json=payload, headers=headers
             )
 
             if response.status_code in [401, 403]:
                 print(f"❌ Error: Authentication failed (HTTP {response.status_code}).")
+                print(f"   Server says: {response.text}")
                 print("   Check your hook token!")
                 return False
             elif response.status_code == 404:
                 print(f"❌ Error: Webhook endpoint not found (HTTP 404).")
                 print("   Check your Gateway URL or ensure 'hooks.enabled' is true.")
                 return False
-            elif response.status_code in [400, 200]:
+            elif response.status_code == 400:
+                # 400 could be a validation error (e.g. sessionKey not allowed) or a missing token error
+                text = response.text.lower()
+                if (
+                    "token" in text
+                    or "auth" in text
+                    or "unauthorized" in text
+                    or "missing" in text
+                ):
+                    print(f"❌ Error: Authentication failed (HTTP 400).")
+                    print(f"   Server says: {response.text}")
+                    return False
+                print(
+                    f"✓ Gateway connection successful! (Server returned 400, but auth passed: {response.text})"
+                )
+                return True
+            elif response.status_code == 200:
                 print("✓ Gateway connection and authentication successful!")
                 return True
             else:
-                print(f"⚠️ Warning: Unexpected response HTTP {response.status_code}.")
+                print(
+                    f"⚠️ Warning: Unexpected response HTTP {response.status_code}: {response.text}"
+                )
                 return True
     except httpx.RequestError as e:
         print(f"❌ Error: Cannot connect to Gateway ({e}).")
@@ -154,7 +176,13 @@ def run_setup():
             default_url = "http://127.0.0.1:18789" if mode != "remote" else "https://"
             url = input(f"? Gateway URL [{default_url}]: ").strip() or default_url
 
-            token = getpass.getpass("? Hook token (from openclaw.json → hooks.token): ")
+            token = getpass.getpass(
+                "? Hook token (from openclaw.json → hooks.token): "
+            ).strip()
+            if not token:
+                print("❌ Error: Hook token cannot be empty! You must enter the token.")
+                print("\nLet's try configuring the Gateway again.\n")
+                continue
 
             if test_gateway_connection(url, token):
                 break
