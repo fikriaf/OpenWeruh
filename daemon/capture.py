@@ -28,7 +28,7 @@ class ScreenCapturer:
             # Convert mss image to PIL Image
             img = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
 
-            # Compute hash
+            # Compute hash on the full resolution image
             current_hash = imagehash.phash(img)
 
             has_changed = False
@@ -43,8 +43,13 @@ class ScreenCapturer:
                 self.prev_hash = current_hash
                 # Ensure directory exists
                 os.makedirs(os.path.dirname(self.save_path), exist_ok=True)
+
+                # Resize image to prevent massive base64 JSON payloads (WinError 10054 / PayloadTooLarge)
+                # Max dimension 1024 to maintain readability but reduce file size well below the standard 100kb JSON limit
+                img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+
                 # Convert to RGB to save as JPEG safely (though it's already RGB after frombytes)
-                img.save(self.save_path, format="JPEG", quality=85)
+                img.save(self.save_path, format="JPEG", quality=65, optimize=True)
                 return True, self.save_path
 
             return False, None

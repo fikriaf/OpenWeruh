@@ -29,6 +29,9 @@ def trigger_agent_with_image(frame_path: str, config: Dict) -> bool:
                 "media": [f"data:image/jpeg;base64,{img_b64}"],
             }
 
+            # Optional: Add simple logging of payload size to debug PayloadTooLarge issues
+            # print(f"[Trigger] Payload size: {len(img_b64) / 1024:.1f} KB")
+
             with httpx.Client(timeout=20) as client:
                 response = client.post(url, json=data, headers=headers)
 
