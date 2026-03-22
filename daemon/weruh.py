@@ -115,47 +115,49 @@ def test_gateway_connection(url, token):
 
 def _section(title):
     print()
-    print(f"  \033[1m── {title} {'─' * max(0, 52 - len(title))}\033[0m")
+    print(f"  \033[36m┌─ {title} {'─' * max(0, 50 - len(title))}─┐\033[0m")
 
 
 def _choice(prompt, choices, current=None):
-    print(f"\n  {prompt}")
+    print(f"\n  \033[1m{prompt}\033[0m")
     for i, c in enumerate(choices):
-        marker = "\033[32m*\033[0m" if (current is not None and i == current) else " "
-        print(f"    [{marker}] {i + 1}) {c}")
+        marker = (
+            "\033[32m\u25cf\033[0m"
+            if (current is not None and i == current)
+            else "\033[90m\u25cb\033[0m"
+        )
+        num = f"\033[36m{i + 1}\033[0m"
+        print(f"    {marker}  {num}) {c}")
     while True:
         try:
             val = input(
-                f"    (1-{len(choices)}) [{current + 1 if current is not None else ''}]: "
+                f"    \033[90m(1-{len(choices)}) [{(current + 1) if current is not None else ''}]: \033[0m"
             ).strip()
             if not val:
                 return current if current is not None else 0
             n = int(val)
             if 1 <= n <= len(choices):
                 return n - 1
-            print("    Invalid. Enter a number.")
+            print("    \033[91mInvalid.\033[0m Enter a number.")
         except ValueError:
-            print("    Enter a number.")
+            print("    \033[91mInvalid.\033[0m Enter a number.")
         except KeyboardInterrupt:
             print("\n\nSetup cancelled.")
+            sys.exit(1)
             sys.exit(1)
 
 
 def _text(prompt, default=""):
-    val = input(f"  {prompt}").strip()
+    if default:
+        val = input(f"  {prompt} \033[90m[default: {default}]: \033[0m").strip()
+    else:
+        val = input(f"  {prompt}: ").strip()
     return val or default
 
 
 def _password(prompt, default_masked="***"):
-    while True:
-        try:
-            val = getpass.getpass(f"  {prompt}").strip()
-            if val:
-                return val
-            return None
-        except KeyboardInterrupt:
-            print("\n\nSetup cancelled.")
-            sys.exit(1)
+    val = getpass.getpass(f"  {prompt} \033[90m[*** if set]: \033[0m").strip()
+    return val or None
 
 
 def _install_openclaw_components():
@@ -201,15 +203,19 @@ def _install_openclaw_components():
 
 def _show_openclaw_notes():
     print()
-    print("  \033[90m── OpenClaw Configuration (run where OpenClaw runs) ──\033[0m")
+    print("  \033[36m────────────────────────────────────────────\033[0m")
+    print(
+        "  \033[1m  OpenClaw Configuration\033[0m  \033[90m(run where OpenClaw runs)\033[0m"
+    )
+    print("  \033[36m────────────────────────────────────────────\033[0m")
     print()
-    print("  Telegram not working?")
-    print("    openclaw config set channels.telegram.dmPolicy open")
+    print("  \033[33m?\033[0m  Telegram not reaching you?")
+    print("     \033[32mopenclaw config set channels.telegram.dmPolicy open\033[0m")
     print()
-    print("  See 'unknown entries (image)'?")
-    print("    openclaw config set tools.profile minimal")
+    print("  \033[33m?\033[0m  See \033[91m'unknown entries (image)'\033[0m error?")
+    print("     \033[32mopenclaw config set tools.profile minimal\033[0m")
     print()
-    print("  \033[90m[Press Enter to continue with OpenWeruh setup...]\033[0m")
+    print("  \033[90m[Press Enter to continue...]\033[0m")
     input()
 
 
@@ -564,15 +570,22 @@ def run_setup():
             )
         )
 
-        print(f"  Gateway URL:  \033[1m{config['gateway']['url']}\033[0m")
-        print(f"  Gateway mode: \033[1m{display_mode}\033[0m")
-        print(f"  Analysis:     \033[1m{display_vision}\033[0m")
+        gw_url = config["gateway"].get("url", "")
+        gw_mode = display_mode
+        analysis = display_vision
         has_fb = config.get("vision", {}).get("provider", {}).get("type")
-        print(
-            f"  Fallback:     \033[1m{'Yes — ' + has_fb if has_fb else 'None'}\033[0m"
+        fb_val = (
+            f"\033[36mYes \u2014 {has_fb}\033[0m" if has_fb else "\033[90mNone\033[0m"
         )
-
-        print("\n  Save this configuration?")
+        print(f"  \033[90m  Gateway URL:\033[0m   \033[1m{gw_url}\033[0m")
+        print(f"  \033[90m  Gateway mode:\033[0m \033[36m{gw_mode}\033[0m")
+        print(f"  \033[90m  Analysis:\033[0m     \033[36m{analysis}\033[0m")
+        print(f"  \033[90m  Fallback:\033[0m     {fb_val}")
+        print(
+            "  \033[36m\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\033[0m"
+        )
+        print()
+        print("  \033[90m  Save this configuration?\033[0m")
         confirm = _choice(
             "",
             ["Yes — save and exit", "No — cancel"],
