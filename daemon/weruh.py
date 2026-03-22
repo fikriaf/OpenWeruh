@@ -201,20 +201,15 @@ def _install_openclaw_components():
 
 def _show_openclaw_notes():
     print()
+    print("  \033[90m── OpenClaw Configuration (set where OpenClaw runs) ──\033[0m")
+    print()
+    print("  1) Telegram DM Policy \u2192 set 'open' if messages don't reach Telegram")
     print(
-        "  \033[90m── OpenClaw Configuration (set via OpenClaw UI/CLI where it runs) ──\033[0m"
+        "  2) tools.profile \u2192 set 'minimal' if you see 'unknown entries (image)'"
     )
-    print()
-    print("  If OpenWeruh messages don't reach your Telegram/WhatsApp:")
     print(
-        "    \u2192 OpenClaw UI \u2192 Channels \u2192 Telegram \u2192 DM Policy \u2192 set to 'open'"
+        "  3) Skill folder \u2192 copy (not symlink) if you see 'Skipping skill path'"
     )
-    print()
-    print("  If you see 'unknown entries (image)' errors:")
-    print("    \u2192 OpenClaw UI \u2192 tools.profile \u2192 set to 'minimal'")
-    print()
-    print("  If you see 'Skipping skill path' warnings:")
-    print("    \u2192 Make sure skill folder is copied (not symlinked/junctioned)")
     print()
     print("  \033[90m[Press Enter to continue with OpenWeruh setup...]\033[0m")
     input()
