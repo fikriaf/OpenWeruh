@@ -208,20 +208,28 @@ def run_setup():
         # 2. Vision Provider
         print()
         vision_idx = get_choice(
-            "? Has your OpenClaw already been configured with a vision-capable imageModel?",
+            "? How should the screen be analyzed?",
             [
-                "Yes — I have already set an imageModel (primary path is sufficient)",
-                "Not sure — add a fallback vision provider",
+                "Send images directly to OpenClaw (requires OpenClaw to have a vision-capable AI model)",
+                "Pre-process locally via API/Ollama and send ONLY TEXT to OpenClaw (solves 'unknown entries: image' error)",
+                "Send images directly, but fallback to local text processing if OpenClaw fails",
             ],
         )
 
+        force_text = False
         if vision_idx == 1:
+            force_text = True
+
+        if vision_idx in [1, 2]:
             print()
             providers = [
                 ("ollama", "Ollama (local, full privacy)"),
                 ("openai", "OpenAI (GPT-4o / GPT-4.1)"),
                 ("anthropic", "Anthropic (Claude Sonnet / Haiku)"),
-                ("google", "Google (Gemini Flash / Pro)"),
+                (
+                    "google",
+                    "Google (Gemini Flash / Pro) - *Recommended for fast/free OCR*",
+                ),
                 ("openrouter", "OpenRouter (access 200+ models via one API)"),
                 ("mistral", "Mistral (Pixtral)"),
                 ("together", "Together AI (Llama Vision)"),
@@ -231,27 +239,34 @@ def run_setup():
                     "Custom / Self-hosted (LiteLLM, vLLM, LMStudio, Azure, etc.)",
                 ),
             ]
-            p_idx = get_choice("? Choose a vision provider:", [p[1] for p in providers])
+            p_idx = get_choice(
+                "? Choose a vision/OCR provider:", [p[1] for p in providers]
+            )
             provider_type = providers[p_idx][0]
 
             api_key = ""
             if provider_type not in ["ollama"]:
                 api_key = getpass.getpass(f"? {provider_type.capitalize()} API Key: ")
 
-            model = input("? Model name (e.g., gpt-4o, llava:13b): ").strip()
+            model = input("? Model name (e.g., gemini-2.5-flash, llava:13b): ").strip()
             override_url = input("? Override URL? (leave empty for default): ").strip()
 
             config["vision"] = {
+                "force_text_mode": force_text,
                 "provider": {
                     "type": provider_type,
                     "api_key": api_key,
                     "model": model,
                     "url": override_url,
-                }
+                },
             }
-            print(f"\n✓ {provider_type.capitalize()} provider configured as fallback")
+            print(
+                f"\n✓ {provider_type.capitalize()} provider configured for {'Text-Only Mode' if force_text else 'Fallback Mode'}."
+            )
         else:
-            print("\n✓ Skipping fallback vision provider configuration")
+            print(
+                "\n✓ Proceeding with direct OpenClaw image payloads (no local processing)."
+            )
 
         # Save to ~/.config/openweruh/weruh.yaml
         config_dir = os.path.expanduser("~/.config/openweruh")
@@ -299,25 +314,41 @@ def main():
         while True:
             changed, frame_path = capturer.capture()
             if changed and frame_path:
-                print("[OpenWeruh] Screen changed, triggering webhook...")
-                success = trigger_agent_with_image(frame_path, config)
+                print("[OpenWeruh] Screen changed, processing frame...")
 
-                if not success and vision_adapter.enabled:
+                # Check if user wants to pre-process the image into text before sending to OpenClaw
+                force_text = config.get("vision", {}).get("force_text_mode", False)
+
+                if force_text and vision_adapter.enabled:
                     print(
-                        "[OpenWeruh] Primary webhook failed, falling back to Vision Provider..."
+                        "[OpenWeruh] Text-Only Mode active. Scanning visual context locally..."
                     )
                     description = vision_adapter.analyze(frame_path)
                     if description:
-                        print(f"[OpenWeruh] Vision description: {description}")
+                        print(f"[OpenWeruh] Extracted context: {description}")
                         trigger_agent_with_text(description, config)
                     else:
+                        print("[OpenWeruh] Vision Provider failed to extract context.")
+                else:
+                    print("[OpenWeruh] Sending image payload directly to OpenClaw...")
+                    success = trigger_agent_with_image(frame_path, config)
+
+                    if not success and vision_adapter.enabled:
                         print(
-                            "[OpenWeruh] Vision Provider failed to generate description."
+                            "[OpenWeruh] Primary webhook failed, falling back to Vision Provider..."
                         )
-                elif not success:
-                    print(
-                        "[OpenWeruh] Webhook failed, no Vision Provider configured. Skipping frame."
-                    )
+                        description = vision_adapter.analyze(frame_path)
+                        if description:
+                            print(f"[OpenWeruh] Vision description: {description}")
+                            trigger_agent_with_text(description, config)
+                        else:
+                            print(
+                                "[OpenWeruh] Vision Provider failed to generate description."
+                            )
+                    elif not success:
+                        print(
+                            "[OpenWeruh] Webhook failed, no Vision Provider configured. Skipping frame."
+                        )
             time.sleep(interval)
 
     except KeyboardInterrupt:

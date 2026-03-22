@@ -44,6 +44,7 @@ modes:
 # Optional fallback vision provider
 # Use this if your OpenClaw imageModel is not properly configured
 vision:
+  force_text_mode: false       # If true, daemon extracts context locally and sends ONLY text to OpenClaw. Solves "unknown entries (image)" error on text-only models.
   provider:
     # type: "openai" # openai | anthropic | google | ollama | openrouter | mistral | together | xai | custom
     # url: "" # leave empty for default URL, fill in to override
