@@ -69,7 +69,7 @@ def trigger_agent_with_text(text_description: str, config: Dict) -> bool:
         "name": "OpenWeruh",
         "sessionKey": "hook:weruh:text",
         "wakeMode": "now",
-        "deliver": False,
+        "deliver": True,
         "channel": "last",
     }
 
