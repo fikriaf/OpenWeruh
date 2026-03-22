@@ -182,11 +182,19 @@ def _show_openclaw_notes():
         (skill_src, skill_dest, "skill/openweruh"),
         (hook_src, hook_dest, "hook/weruh-boot"),
     ]:
-        if os.path.exists(src) and not os.path.exists(dst):
+        if os.path.exists(src):
             try:
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                shutil.copytree(src, dst)
-                copied.append(label)
+                if os.path.islink(dst) or (os.name == "nt" and os.path.isdir(dst)):
+                    if sys.platform == "win32":
+                        import subprocess
+
+                        subprocess.run(["cmd", "/c", "rmdir", dst], capture_output=True)
+                    else:
+                        os.remove(dst)
+                if not os.path.exists(dst):
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    shutil.copytree(src, dst)
+                    copied.append(label)
             except Exception:
                 pass
 
@@ -206,8 +214,8 @@ def _show_openclaw_notes():
     )
     print()
     print("  If 'Skipping skill path' appears:")
-    print("    The skill path resolves outside OpenClaw's configured root.")
-    print("    Make sure you copied (not symlinked) the skill folder.")
+    print("    A junction or symlink may still exist. Run setup again — it will")
+    print("    remove the junction and copy the folder fresh.")
     print()
     print("    Restart OpenClaw manually after changing the config.")
     print()
