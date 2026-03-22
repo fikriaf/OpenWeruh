@@ -330,14 +330,21 @@ ocr:
 ```
 
 **Installation:**
-```bash
-# Tesseract OCR (recommended — fast)
-pip install pytesseract pillow
-# Windows: choco install tesseract -y
-# macOS:  brew install tesseract
-# Linux:  sudo apt install tesseract-ocr
 
-# OR EasyOCR (better accuracy on complex layouts, slower)
+> **Tesseract OCR must be installed BEFORE selecting OCR mode in setup.**
+> If Tesseract is not found, the setup will show install instructions and exit.
+
+```bash
+# 1. Install Tesseract OCR engine (system binary)
+# Windows: choco install tesseract -y
+#           OR download from https://github.com/UB-Mannheim/tesseract/wiki
+# macOS:   brew install tesseract
+# Linux:   sudo apt install tesseract-ocr
+
+# 2. Install Python packages
+pip install pytesseract pillow
+
+# OR EasyOCR (better accuracy on complex layouts, slower — GPU recommended)
 pip install easyocr
 ```
 

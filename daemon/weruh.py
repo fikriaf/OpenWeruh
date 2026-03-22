@@ -202,17 +202,35 @@ def run_setup():
             )
             ocr_lib = "pytesseract" if ocr_lib_idx == 0 else "easyocr"
 
+            if ocr_lib == "pytesseract":
+                try:
+                    import shutil
+
+                    if not shutil.which("tesseract") and not os.path.exists(
+                        r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+                    ):
+                        print()
+                        print("  [X] Tesseract OCR is not installed!")
+                        print()
+                        print("  Install Tesseract OCR first:")
+                        print("    Windows: choco install tesseract -y")
+                        print(
+                            "            OR download from https://github.com/UB-Mannheim/tesseract/wiki"
+                        )
+                        print("    macOS:   brew install tesseract")
+                        print("    Linux:   sudo apt install tesseract-ocr")
+                        print()
+                        print("  After installing, run setup again.")
+                        sys.exit(1)
+                except Exception:
+                    pass
+
             lang = (
                 input(
                     "? OCR language codes (e.g. eng, eng+ind, eng+ara) [eng+ind]: "
                 ).strip()
                 or "eng+ind"
             )
-            if ocr_lib == "pytesseract":
-                print("  [INFO] Tesseract OCR requires system binaries installed:")
-                print("         Windows: choco install tesseract -y")
-                print("         macOS:   brew install tesseract")
-                print("         Linux:   sudo apt install tesseract-ocr")
 
             config["ocr"] = {
                 "enabled": True,
@@ -361,6 +379,18 @@ def main():
     print(
         f"[OpenWeruh] Mode: {mode_desc} | Capture every {interval}s | Threshold: {threshold}"
     )
+
+    if use_ocr and not ocr_processor.is_available():
+        print("\n[X] OCR is enabled but Tesseract is not installed or not in PATH.")
+        print("    Install Tesseract OCR:")
+        print("      Windows: choco install tesseract -y")
+        print(
+            "              OR download from https://github.com/UB-Mannheim/tesseract/wiki"
+        )
+        print("      macOS:   brew install tesseract")
+        print("      Linux:   sudo apt install tesseract-ocr")
+        print("\n    After installing, restart the daemon.")
+        sys.exit(1)
 
     try:
         while True:
