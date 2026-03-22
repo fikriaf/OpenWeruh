@@ -160,9 +160,9 @@ capture:
 
 OpenWeruh supports three deployment architectures:
 
-1.  **Mode A (Local)**: OpenClaw Gateway and the OpenWeruh daemon run on the exact same local machine.
+1.  **Mode A (Local)**: OpenClaw Gateway and the OpenWeruh daemon run on the exact same local machine. **Recommended for development and self-hosted setups.**
 2.  **Mode B (SSH Tunnel)**: OpenClaw runs on a remote VPS, but is bound to `loopback`. You use an SSH tunnel ([`autossh`](https://www.harding.motd.ca/autossh/)) to securely link the local daemon to the server. *(Recommended for high privacy)*.
-3.  **Mode C (Remote Public URL)**: OpenClaw runs on a remote server accessible via [Tailscale](https://tailscale.com), [Localtonet](https://localtonet.com), or a standard Reverse Proxy ([Nginx](https://nginx.org) / [Caddy](https://caddyserver.com)). The daemon transmits via HTTPS.
+3.  **Mode C (Remote Public URL)**: OpenClaw runs on a remote server accessible via [Tailscale](https://tailscale.com), [Localtonet](https://localtonet.com), or a standard Reverse Proxy ([Nginx](https://nginx.org) / [Caddy](https://caddyserver.com)). The daemon transmits via HTTPS. **Note: Hosted services (e.g., KiloCode cloud) may block incoming webhooks due to reverse proxy restrictions. Use Mode A or B for reliable webhook delivery.**
 
 ---
 
@@ -272,7 +272,7 @@ OpenWeruh Setup
   [↑/↓ navigate   Enter confirm]
 
 ? Gateway URL [http://127.0.0.1:18789]:
-? Hook token (from openclaw.json → hooks.token): ****
+? Hook token (hooks.token — NOT the web UI #token= URL): ****
 
   ? How should screen content be analyzed?
 
@@ -420,6 +420,12 @@ channels.telegram.dmPolicy = "open"
 **Cause:** Too many webhook triggers per second.
 
 **Fix:** Set `capture.interval_seconds` to at least `60` in `weruh.yaml`, and increase `capture.change_threshold`.
+
+### Webhook blocked for hosted/deployed OpenClaw (401 / "Authentication required")
+
+**Cause:** Hosted services (e.g., KiloCode cloud) run behind a reverse proxy that strips `Authorization` headers. The webhook endpoint `/hooks/agent` cannot be called from external IPs.
+
+**Fix:** Use **Mode A (local)** or **Mode B (SSH tunnel)** instead. Place the OpenWeruh daemon on the same machine as OpenClaw, or forward the gateway port via SSH tunnel, so the webhook connects to `http://127.0.0.1:18789`.
 
 ### Tesseract OCR not found on startup
 

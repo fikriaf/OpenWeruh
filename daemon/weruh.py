@@ -109,14 +109,33 @@ def test_gateway_connection(url, token):
                 print(f"  [X] Authentication failed (HTTP 401).")
                 print(f"      {body}")
                 print()
-                print(
-                    "  \033[33m!\033[0m  Make sure you set the correct \033[1mhooks.token\033[0m."
-                )
-                print(
-                    "  \033[90m  The web UI token (#token=... in URL) is NOT the hooks token."
-                )
-                print("  \033[90m  Run in OpenClaw: openclaw config get hooks.token")
-                print("  \033[90m  Or check openclaw.json → hooks.token")
+                if "required" in body.lower():
+                    print(
+                        "  \033[33m!\033[0m  Server says auth is \033[1mrequired but not sent\033[0m."
+                    )
+                    print(
+                        "  \033[90m  This usually means your reverse proxy (Caddy/nginx)"
+                    )
+                    print(
+                        "  \033[90m  is stripping the Authorization header. Fix the proxy"
+                    )
+                    print(
+                        "  \033[90m  to forward headers, or add this to your Caddyfile:"
+                    )
+                    print(
+                        '  \033[36m    header_up Authorization "{http.request.header.Authorization}"\033[0m'
+                    )
+                else:
+                    print(
+                        "  \033[33m!\033[0m  Make sure you set the correct \033[1mhooks.token\033[0m."
+                    )
+                    print(
+                        "  \033[90m  The web UI token (#token=... in URL) is NOT the hooks token."
+                    )
+                    print(
+                        "  \033[90m  Run in OpenClaw: openclaw config get hooks.token"
+                    )
+                    print("  \033[90m  Or check openclaw.json → hooks.token")
                 return False
             elif status == 403:
                 print(f"  [X] Forbidden (HTTP 403).")
@@ -287,27 +306,6 @@ def _show_openclaw_setup_commands(token: str):
     input()
 
 
-def _show_openclaw_notes():
-    print()
-    print("  \033[36m────────────────────────────────────────────\033[0m")
-    print(
-        "  \033[1m  OpenClaw Configuration\033[0m  \033[90m(run where OpenClaw runs)\033[0m"
-    )
-    print("  \033[36m────────────────────────────────────────────\033[0m")
-    print()
-    print("  \033[33m?\033[0m  Telegram not reaching you?")
-    print("     Edit openclaw.json:")
-    print('       channels.telegram.allowFrom = ["*"],')
-    print('       channels.telegram.dmPolicy = "open"')
-    print()
-    print("  \033[33m?\033[0m  See \033[91m'unknown entries (image)'\033[0m error?")
-    print("     Edit openclaw.json:")
-    print('       tools.profile = "minimal"')
-    print()
-    print("  \033[90m[Press Enter to continue with OpenWeruh setup...]\033[0m")
-    input()
-
-
 def run_setup():
     print_banner()
 
@@ -406,14 +404,38 @@ def run_setup():
     }
 
     try:
-        if not test_gateway_connection(gw_url, gw_token):
-            print("\n  Please fix the gateway settings and run setup again.")
-            sys.exit(1)
+        if gw_idx == 0:
+            if not test_gateway_connection(gw_url, gw_token):
+                print("\n  Please fix the gateway settings and run setup again.")
+                sys.exit(1)
 
-        ok, err = _install_openclaw_components(preflight_config)
-        if err:
-            print(f"\n  \033[91m[X]\033[0m {err}")
-        _show_install_commands()
+            ok, err = _install_openclaw_components(preflight_config)
+            if err:
+                print(f"\n  \033[91m[X]\033[0m {err}")
+            _show_install_commands()
+        else:
+            print()
+            print(
+                "  \033[33m!\033[0m  Remote/hosted OpenClaw detected. Gateway webhook test"
+            )
+            print(
+                "  \033[90m  is skipped because public deployments (like Kilo/KiloCode)"
+            )
+            print("  \033[90m  often block incoming webhook calls from external IPs.")
+            print()
+            print("  \033[90m  For remote OpenClaw, the recommended approach is:")
+            print(
+                "  \033[90m  1. Run OpenWeruh daemon on the SAME machine as OpenClaw,"
+            )
+            print("  \033[90m     then set Gateway URL to http://127.0.0.1:18789")
+            print(
+                "  \033[90m  2. Or use SSH tunnel (Mode B) to forward the gateway port"
+            )
+            print()
+            print("  \033[90m  To continue with remote URL anyway, press Enter.")
+            print("  \033[90m  To change gateway mode, restart setup.\033[0m")
+            input()
+            _show_install_commands()
 
         _section("Screen Analysis")
 
