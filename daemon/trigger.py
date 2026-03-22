@@ -1,39 +1,46 @@
 import httpx
+import base64
 from typing import Dict, Optional
 
 
 def trigger_agent_with_image(frame_path: str, config: Dict) -> bool:
-    """Primary path: send image to OpenClaw webhook."""
+    """Primary path: send image to OpenClaw webhook via base64 JSON payload."""
     gateway_config = config.get("gateway", {})
     url = (
         f"{gateway_config.get('url', 'http://127.0.0.1:18789').rstrip('/')}/hooks/agent"
     )
     token = gateway_config.get("hook_token", "")
 
-    headers = {}
+    headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
     try:
         with open(frame_path, "rb") as f:
-            files = {"media": ("weruh-frame.jpg", f, "image/jpeg")}
+            img_b64 = base64.b64encode(f.read()).decode("utf-8")
+
             data = {
                 "message": "[WERUH] Screen attachment ready. Apply active persona.",
                 "name": "OpenWeruh",
                 "sessionKey": "hook:weruh:screen",
                 "wakeMode": "now",
-                "deliver": "true",
+                "deliver": True,
                 "channel": "last",
+                "media": [f"data:image/jpeg;base64,{img_b64}"],
             }
 
-            with httpx.Client(timeout=10) as client:
-                response = client.post(url, data=data, files=files, headers=headers)
+            with httpx.Client(timeout=20) as client:
+                response = client.post(url, json=data, headers=headers)
 
                 if response.status_code >= 400:
                     print(
                         f"[Trigger] Primary path failed: {response.status_code} {response.reason_phrase}"
                     )
                     print(f"[Trigger] Server response: {response.text}")
+                    if "allowRequestSessionKey" in response.text:
+                        print(
+                            "\n>>> ACTION REQUIRED: You must enable 'hooks.allowRequestSessionKey=true' in your OpenClaw Gateway config!\n"
+                        )
                     return False
 
                 return True
