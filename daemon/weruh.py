@@ -196,8 +196,6 @@ def test_gateway_connection(url, token):
 
 
 def run_setup():
-    print_banner()
-
     try:
         while True:
             gw_idx = get_choice(
