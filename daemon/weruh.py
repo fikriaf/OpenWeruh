@@ -8,6 +8,60 @@ from trigger import trigger_agent_with_image, trigger_agent_with_text
 from vision import VisionProviderAdapter
 
 
+def setup_windows_ansi():
+    """Enable ANSI escape codes on Windows CMD / PowerShell."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32
+            # Enable ENABLE_VIRTUAL_TERMINAL_PROCESSING (0x0004)
+            kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+        except Exception:
+            pass
+
+
+# ANSI color codes
+RED_ORANGE = "\033[38;2;255;90;20m"  # #FF5A14 — vivid red-orange
+INDIGO = "\033[38;2;63;0;255m"  # #3F00FF — indigo / nila biru
+RESET = "\033[0m"
+
+
+# ASCII art split into individual word rows.
+# Each line is split at the natural gap between "OPEN" and "WERUH".
+# The banner is 87 chars wide; "OPEN" occupies cols 0-43, "WERUH" cols 44+.
+SPLIT = 44  # character index where WERUH starts
+
+BANNER_LINES = [
+    r"$$$$$$\  $$$$$$$\  $$$$$$$$\ $$\   $$\ $$\      $$\ $$$$$$$$\ $$$$$$$\  $$\   $$\ $$\   $$\ ",
+    r"$$  __$$\ $$  __$$\ $$  _____|$$$\  $$ |$$ | $\  $$ |$$  _____|$$  __$$\ $$ |  $$ |$$ |  $$ |",
+    r"$$ /  $$ |$$ |  $$ |$$ |      $$$$\ $$ |$$ |$$$\ $$ |$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |",
+    r"$$ |  $$ |$$$$$$$  |$$$$$\    $$ $$\$$ |$$ $$ $$\$$ |$$$$$\    $$$$$$$  |$$ |  $$ |$$$$$$$$ |",
+    r"$$ |  $$ |$$  ____/ $$  __|   $$ \$$$$ |$$$$  _$$$$ |$$  __|   $$  __$$< $$ |  $$ |$$  __$$ |",
+    r"$$ |  $$ |$$ |      $$ |      $$ |\$$$ |$$$  / \$$$ |$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |",
+    r" $$$$$$  |$$ |      $$$$$$$$\ $$ | \$$ |$$  /   \$$ |$$$$$$$$\ $$ |  $$ |\$$$$$$  |$$ |  $$ |",
+    r" \______/ \__|      \________|\__|  \__|\__/     \__|\________|\__|  \__| \______/ \__|  \__|",
+]
+
+
+def colorize_line(line: str) -> str:
+    """
+    Color the OPEN portion (left) red-orange and
+    the WERUH portion (right) indigo-blue.
+    """
+    left = line[:SPLIT]
+    right = line[SPLIT:]
+    return f"{RED_ORANGE}{left}{RESET}{INDIGO}{right}{RESET}"
+
+
+def print_banner():
+    setup_windows_ansi()
+    print()
+    for line in BANNER_LINES:
+        print(colorize_line(line))
+    print("\n" + " " * 35 + f"{RED_ORANGE}S E T U P{RESET}\n")
+
+
 def load_config():
     # Use environment variable or default
     config_path = os.environ.get(
@@ -46,8 +100,7 @@ def get_choice(prompt, choices):
 
 
 def run_setup():
-    print("\nOpenWeruh Setup")
-    print("───────────────")
+    print_banner()
 
     try:
         # 1. Gateway Location
