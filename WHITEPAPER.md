@@ -16,7 +16,7 @@
 7. Workflow
 8. Persona & Configuration Modes
 9. Deployment Modes
-10. Roadmap
+10. Troubleshooting
 11. Security & Privacy
 12. Repository Structure
 13. Contributing & License
@@ -962,6 +962,70 @@ OpenWeruh is ready. Run: python daemon/weruh.py start
 - Persistent context memory across sessions
 - Browser extension plugin (more accurate context from DOM vs screenshot)
 - Simple dashboard: intervention history, mode statistics
+
+---
+
+## 10. Troubleshooting
+
+### `tools.profile allowlist contains unknown entries (image)`
+
+**Cause:** Your OpenClaw agent profile references the `image` tool, but your current model does not support vision.
+
+**Root cause:** OpenClaw persists session tool capabilities. When you previously sent image payloads (e.g. during testing), the session `hook:weruh:screen` was initialized with the `image` tool. OpenWeruh's text mode now uses `hook:weruh:text` (isolated session, `deliver: false`) to avoid this conflict.
+
+**Solutions — pick one:**
+
+1. **Remove `image` from your agent's `tools.profile` allowlist**:
+   ```
+   openclaw config set tools.profile.allowlist "shell,grep,file.read,code"
+   # remove "image" from the list
+   ```
+
+2. **Use a text-only model** that doesn't require image tools:
+   ```
+   openclaw models set-current step-3.5-flash:free
+   ```
+
+3. **Set a text-only agent profile** for the `hook:weruh:text` session:
+   ```
+   openclaw config set sessions.hook:weruh:text.agentProfile text-only
+   ```
+
+### `lane wait exceeded` / agent is slow or stuck
+
+**Cause:** The agent session is overwhelmed by too many webhook triggers.
+
+**Fix:** Adjust `weruh.yaml`:
+```yaml
+capture:
+  interval_seconds: 30      # increase to reduce trigger frequency
+  change_threshold: 15       # increase to only send significant changes
+  active_hours: "09:00-18:00"  # limit operational window
+```
+
+### `Skipping skill path that resolves outside its configured root`
+
+**Cause:** Windows is case-sensitive with symlinks/junctions pointing to `%USERPROFILE%`.
+
+**Fix:** Copy the skill folder directly instead of using symlinks:
+```cmd
+xcopy /E /I skill\openweruh "%USERPROFILE%\.openclaw\skills\openweruh"
+xcopy /E /I hook\weruh-boot "%USERPROFILE%\.openclaw\hooks\weruh-boot"
+```
+
+### Tesseract OCR not found on startup
+
+```
+[X] OCR is enabled but Tesseract is not installed or not in PATH.
+```
+
+Install Tesseract OCR first:
+```
+Windows: choco install tesseract -y
+         OR https://github.com/UB-Mannheim/tesseract/wiki
+macOS:   brew install tesseract
+Linux:   sudo apt install tesseract-ocr
+```
 
 ---
 

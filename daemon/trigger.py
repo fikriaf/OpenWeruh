@@ -1,6 +1,6 @@
 import httpx
 import base64
-from typing import Dict, Optional
+from typing import Dict
 
 
 def trigger_agent_with_image(frame_path: str, config: Dict) -> bool:
@@ -19,44 +19,41 @@ def trigger_agent_with_image(frame_path: str, config: Dict) -> bool:
         with open(frame_path, "rb") as f:
             img_b64 = base64.b64encode(f.read()).decode("utf-8")
 
-            data = {
-                "message": "[WERUH] Screen attachment ready. Apply active persona.",
-                "name": "OpenWeruh",
-                "sessionKey": "hook:weruh:screen",
-                "wakeMode": "now",
-                "deliver": True,
-                "channel": "last",
-                "media": [f"data:image/jpeg;base64,{img_b64}"],
-            }
+        data = {
+            "message": "[WERUH] Screen attachment ready. Apply active persona.",
+            "name": "OpenWeruh",
+            "sessionKey": "hook:weruh:screen",
+            "wakeMode": "now",
+            "deliver": True,
+            "channel": "last",
+            "media": [f"data:image/jpeg;base64,{img_b64}"],
+        }
 
-            # Optional: Add simple logging of payload size to debug PayloadTooLarge issues
-            # print(f"[Trigger] Payload size: {len(img_b64) / 1024:.1f} KB")
+        with httpx.Client(timeout=20) as client:
+            response = client.post(url, json=data, headers=headers)
 
-            with httpx.Client(timeout=20) as client:
-                response = client.post(url, json=data, headers=headers)
-
-                if response.status_code >= 400:
+            if response.status_code >= 400:
+                print(
+                    f"[Trigger] Image path failed: HTTP {response.status_code} {response.reason_phrase}"
+                )
+                print(f"[Trigger] Response: {response.text}")
+                if "allowRequestSessionKey" in response.text:
                     print(
-                        f"[Trigger] Primary path failed: {response.status_code} {response.reason_phrase}"
+                        "\n  [X] Enable 'hooks.allowRequestSessionKey=true' in OpenClaw config.\n"
                     )
-                    print(f"[Trigger] Server response: {response.text}")
-                    if "allowRequestSessionKey" in response.text:
-                        print(
-                            "\n>>> ACTION REQUIRED: You must enable 'hooks.allowRequestSessionKey=true' in your OpenClaw Gateway config!\n"
-                        )
-                    return False
+                return False
 
-                return True
+            return True
     except httpx.RequestError as e:
-        print(f"[Trigger] Primary path connection error: {e}")
+        print(f"[Trigger] Image path connection error: {e}")
         return False
     except Exception as e:
-        print(f"[Trigger] Primary path error: {e}")
+        print(f"[Trigger] Image path error: {e}")
         return False
 
 
 def trigger_agent_with_text(text_description: str, config: Dict) -> bool:
-    """Fallback path: send text description to OpenClaw webhook."""
+    """Send text-only context to OpenClaw webhook (for OCR or Vision Provider mode)."""
     gateway_config = config.get("gateway", {})
     url = (
         f"{gateway_config.get('url', 'http://127.0.0.1:18789').rstrip('/')}/hooks/agent"
@@ -68,11 +65,11 @@ def trigger_agent_with_text(text_description: str, config: Dict) -> bool:
         headers["Authorization"] = f"Bearer {token}"
 
     data = {
-        "message": f"[WERUH] Screen context text fallback: {text_description}. Apply active persona.",
+        "message": f"[WERUH] Screen context: {text_description}",
         "name": "OpenWeruh",
-        "sessionKey": "hook:weruh:screen",
+        "sessionKey": "hook:weruh:text",
         "wakeMode": "now",
-        "deliver": True,
+        "deliver": False,
         "channel": "last",
     }
 
@@ -81,16 +78,14 @@ def trigger_agent_with_text(text_description: str, config: Dict) -> bool:
             response = client.post(url, json=data, headers=headers)
 
             if response.status_code >= 400:
-                print(
-                    f"[Trigger] Fallback text path failed: {response.status_code} {response.reason_phrase}"
-                )
-                print(f"[Trigger] Server response: {response.text}")
+                print(f"[Trigger] Text path failed: HTTP {response.status_code}")
+                print(f"[Trigger] Response: {response.text}")
                 return False
 
             return True
     except httpx.RequestError as e:
-        print(f"[Trigger] Fallback text path connection error: {e}")
+        print(f"[Trigger] Text path connection error: {e}")
         return False
     except Exception as e:
-        print(f"[Trigger] Fallback text path error: {e}")
+        print(f"[Trigger] Text path error: {e}")
         return False

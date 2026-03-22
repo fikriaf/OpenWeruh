@@ -379,6 +379,66 @@ vision:
 
 ---
 
+## Troubleshooting
+
+### `tools.profile allowlist contains unknown entries (image)`
+
+**Cause:** Your OpenClaw agent profile references the `image` tool, but your current model does not support vision.
+
+**Solutions — pick one:**
+
+1. **Remove `image` from your agent's `tools.profile` allowlist** (recommended):
+   ```
+   openclaw config set tools.profile.allowlist "shell,grep,file.read,code"
+   # remove "image" from the list
+   ```
+
+2. **Switch to a text-only model** that doesn't require image tools:
+   ```
+   openclaw models set-current step-3.5-flash:free
+   ```
+
+3. **Set a text-only agent profile** specifically for the `hook:weruh:text` session:
+   ```
+   openclaw config set sessions.hook:weruh:text.agentProfile text-only
+   # (check your OpenClaw docs for the exact syntax)
+   ```
+
+### `lane wait exceeded` / agent is slow or stuck
+
+**Cause:** The agent session is overwhelmed by too many webhook triggers.
+
+**Fix:**
+- Increase `capture.interval_seconds` in `weruh.yaml` (e.g., `30` or `60`)
+- Increase `capture.change_threshold` to only send significant screen changes
+- Set active hours to avoid capturing during idle time
+
+### `Skipping skill path that resolves outside its configured root`
+
+**Cause:** Windows is case-sensitive with symlinks/junctions pointing to `%USERPROFILE%`.
+
+**Fix:** Copy the skill folder directly instead of using symlinks:
+```cmd
+# Instead of creating a junction, copy the folder
+xcopy /E /I skill\openweruh "%USERPROFILE%\.openclaw\skills\openweruh"
+```
+
+### Tesseract OCR not found on startup
+
+```
+[X] OCR is enabled but Tesseract is not installed or not in PATH.
+```
+
+Install Tesseract OCR first:
+```
+Windows: choco install tesseract -y
+         OR download from https://github.com/UB-Mannheim/tesseract/wiki
+macOS:   brew install tesseract
+Linux:   sudo apt install tesseract-ocr
+```
+
+---
+
 ## Security & Privacy
 
 Data never leaves your machine without explicit permission.
