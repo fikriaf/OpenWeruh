@@ -134,11 +134,21 @@ The daemon operates in a loop:
 ```
 capture → hash frame → compare with previous frame →
 if significant change → save to /tmp/weruh-frame.jpg →
-  [primary]  send to OpenClaw webhook with image attachment
-  [fallback] if OpenClaw image pipeline fails:
-             → send to Vision Provider (user-configured)
-             → get text description
-             → send text to OpenClaw webhook
+  [ocr.enabled = true]
+             → extract visible TEXT via OCR (pytesseract / easyocr)
+             → send ONLY text to OpenClaw webhook
+             (no LLM, no API cost, fully offline)
+  [ocr.enabled = false]
+             send image to OpenClaw webhook
+             │
+        OpenClaw success? ── yes ── done
+                │
+               no
+                │
+         vision.provider configured?
+               yes ──→ describe via LLM
+                        send text to OpenClaw
+               no ──→ skip frame
 ```
 
 **Change detection** uses perceptual hashing (pHash) via the `imagehash` library. Only frames that differ meaningfully are sent to the agent — not every screenshot. This keeps API costs low.
@@ -235,7 +245,40 @@ def trigger_agent_with_image(frame_path: str, config: dict):
 
 If the primary path fails (image dropped by OpenClaw due to a pipeline bug or the model does not support vision), the daemon falls back to the Vision Provider configured by the user.
 
-### 5.5 Vision Engine — Primary OpenClaw, Fallback Custom Provider
+### 5.5 Vision Engine — OCR, OpenClaw, & Fallback
+
+#### Text-Only Mode: OCR Library (Recommended for Text-Only LLMs)
+
+When `ocr.enabled: true` in `weruh.yaml`, OpenWeruh uses a local OCR library to extract visible text from screenshots — completely bypassing any LLM.
+
+This solves the `tools.profile allowlist contains unknown entries (image)` error that text-only LLMs throw. No API key, no latency, no cost.
+
+**Two OCR engines supported:**
+
+**pytesseract** (recommended — fast):
+```bash
+pip install pytesseract pillow
+# Windows: choco install tesseract -y
+# macOS:  brew install tesseract
+# Linux:  sudo apt install tesseract-ocr
+```
+```yaml
+ocr:
+  enabled: true
+  library: "pytesseract"
+  lang: "eng+ind"
+```
+
+**EasyOCR** (better accuracy, slower, GPU preferred):
+```bash
+pip install easyocr
+```
+```yaml
+ocr:
+  enabled: true
+  library: "easyocr"
+  lang: "eng+ind"
+```
 
 #### Primary Path: OpenClaw `imageModel`
 
@@ -261,16 +304,19 @@ The fallback is only active if:
 #### Provider Configuration in `weruh.yaml`
 
 ```yaml
-# weruh.yaml — vision provider configuration (optional)
+# Text-Only Mode (OCR) — extract visible text, no LLM needed
+ocr:
+  enabled: false
+  library: "pytesseract"   # pytesseract | easyocr
+  lang: "eng+ind"          # language codes
+
+# Vision Provider (Fallback) — only used when OpenClaw's image pipeline fails
 vision:
-  # If left empty: OpenWeruh relies 100% on OpenClaw's imageModel (primary path)
-  # If filled: used as automatic fallback when the primary path fails
   provider:
-    type: "openai"             # openai | anthropic | google | ollama | openrouter | mistral | together | xai | custom
-    url: ""                    # leave empty = use default URL per type
-                               # fill in = override URL (for self-hosted, proxy, LAN, etc.)
-    api_key: ""                # empty if local Ollama
-    model: ""                  # model name at the provider
+    type: "ollama"             # openai | anthropic | google | ollama | openrouter | mistral | together | xai | custom
+    url: ""                   # leave empty = use default URL
+    api_key: ""               # empty for local Ollama
+    model: "llava:13b"        # model name
     timeout_seconds: 30
 ```
 
@@ -464,68 +510,58 @@ vision:
 ```
 daemon has a new frame
         │
-        ▼
-send image to OpenClaw webhook
+        ├── ocr.enabled = true?
+        │     yes ──→ extract TEXT via pytesseract / easyocr
+        │               send ONLY text to OpenClaw
         │
-   success? ──── no ──→ vision.provider configured?
-        │                           │
-       yes                     yes ──┤── no
-        │                      │         │
-        ▼                      ▼         ▼
-  OpenClaw agent         dispatch to     log warning,
-  handles via            provider        skip frame
-  imageModel             adapter
-                         (openai/anthropic/google/ollama/custom)
-                              │
-                              ▼
-                        get text description
-                              │
-                              ▼
-                        send text to
-                        OpenClaw webhook
+        ├── ocr.enabled = false
+        │     │
+        │     send image to OpenClaw webhook
+        │              │
+        │     OpenClaw success? ──── yes ──→ done
+        │              │
+        │             no
+        │              │
+        │      vision.provider configured?
+        │            yes ──→ describe via LLM
+        │                      send text to OpenClaw
+        │            no ──→ skip frame
 ```
 
-#### Interactive Setup (via `openweruh setup`)
+#### Interactive Setup (via `python daemon/weruh.py setup`)
 
 ```
-? Has your OpenClaw already been configured with a vision-capable imageModel?
-  ❯ Yes — I have already set an imageModel (primary path is sufficient)
-    Not sure — add a fallback vision provider
+? Where is your OpenClaw Gateway running?
 
-[If fallback selected:]
+  1) On this same machine (local)
+> 2) On a remote server (SSH tunnel)
+  3) On a remote server (public URL / Tailscale)
 
-? Choose a vision provider:
-  ❯ Ollama (local, full privacy)
-    OpenAI (GPT-4o / GPT-4.1)
-    Anthropic (Claude Sonnet / Haiku)
-    Google (Gemini Flash / Pro)
-    OpenRouter (access 200+ models via one API)
-    Mistral (Pixtral)
-    Together AI (Llama Vision)
-    xAI (Grok Vision)
-    Custom / Self-hosted (LiteLLM, vLLM, LMStudio, Azure, etc.)
+  [↑/↓ navigate   Enter confirm]
 
-[Example — Anthropic selected:]
+? Gateway URL [http://127.0.0.1:18789]:
+? Hook token (from openclaw.json → hooks.token): ****
 
-? Anthropic API Key: sk-ant-****
-? Model [claude-sonnet-4-6]:
-? Override URL? (leave empty for default https://api.anthropic.com):
+? How should screen content be analyzed?
 
-✓ Connection to Anthropic... success (claude-sonnet-4-6 supports vision)
-✓ Vision provider configured as fallback
+> 1) OpenClaw has a vision-capable AI model (send image directly — recommended)
+  2) Text-Only Mode: extract visible TEXT via OCR library (no LLM needed)
+  3) Text-Only Mode: use Vision API/LLM to DESCRIBE the screen (fallback if OpenClaw fails)
 
-[Example — Custom selected:]
+  [↑/↓ navigate   Enter confirm]
 
-? Provider URL: http://192.168.1.50:11434/api/chat
-? API Key (leave empty if not required):
-? Model name: llava:13b
-? API format:
-  ❯ OpenAI-compatible
-    Anthropic-compatible
-    Google Gemini-compatible
+[Option 2 — OCR selected:]
 
-✓ Connection test... success
-✓ Custom provider configured as fallback
+? Choose an OCR library:
+
+> 1) Tesseract OCR (pytesseract) — fastest
+  2) EasyOCR — better for complex layouts, slower
+
+  [↑/↓ navigate   Enter confirm]
+
+? OCR language codes (e.g. eng, eng+ind, eng+ara) [eng+ind]:
+
+  [OK] Text-Only Mode enabled using pytesseract. OpenClaw will receive plain text.
 ```
 
 Configuration is saved to `~/.config/openweruh/weruh.yaml` with permission `600`. API keys are masked when displayed in the CLI.
@@ -964,9 +1000,10 @@ openweruh/
 ├── daemon/
 │   ├── weruh.py                    ← main daemon entrypoint
 │   ├── capture.py                  ← mss wrapper + pHash logic
-│   ├── vision.py                   ← vision provider adapter (all providers)
+│   ├── ocr.py                      ← OCR engine (pytesseract / easyocr)
+│   ├── vision.py                   ← vision provider adapter (fallback LLM)
 │   ├── trigger.py                  ← OpenClaw webhook sender
-│   └── requirements.txt           ← mss, imagehash, httpx, pillow, pyyaml
+│   └── requirements.txt           ← mss, imagehash, httpx, pillow, pyyaml, pytesseract
 │
 ├── skill/
 │   └── openweruh/

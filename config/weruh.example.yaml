@@ -2,17 +2,14 @@
 # Save this file to ~/.config/openweruh/weruh.yaml
 
 gateway:
-  # Deployment mode: local, tunnel, or remote
-  mode: "local"
-  # URL to your OpenClaw gateway
-  url: "http://127.0.0.1:18789"
-  # Webhook token from openclaw.json
+  mode: "local"                  # local | tunnel | remote
+  url: "http://127.0.0.1:18789"  # OpenClaw Gateway URL
   hook_token: "your-hook-secret"
-  
+
 capture:
-  interval_seconds: 15        # how often screenshots are taken
-  change_threshold: 10        # minimum pHash distance to trigger
-  active_hours: "07:00-23:00" # only active during working hours
+  interval_seconds: 15           # how often screenshots are taken
+  change_threshold: 10           # minimum pHash distance to trigger
+  active_hours: "07:00-23:00"   # only active during working hours
 
 persona:
   mode: "silent"                  # skeptic | researcher | focus | guardian | silent
@@ -41,13 +38,34 @@ modes:
   silent:
     description: "Record context without intervention. Only generate daily summary."
 
-# Optional fallback vision provider
-# Use this if your OpenClaw imageModel is not properly configured
+# ─────────────────────────────────────────────────────────────────
+# OCR (Text-Only Mode) — uses pytesseract or EasyOCR
+# Extracts VISIBLE TEXT from the screen and sends plain text to OpenClaw.
+# No LLM needed. Solves "unknown entries (image)" error on text-only LLMs.
+#
+# Install dependencies:
+#   pip install pytesseract pillow
+#   Windows: choco install tesseract -y
+#   macOS:   brew install tesseract
+#   Linux:   sudo apt install tesseract-ocr
+#
+# OR for EasyOCR (better accuracy, slower):
+#   pip install easyocr
+#
+ocr:
+  enabled: false
+  library: "pytesseract"          # pytesseract | easyocr
+  lang: "eng+ind"                  # language codes (e.g. eng, eng+ind, eng+ara)
+
+# ─────────────────────────────────────────────────────────────────
+# Vision Provider (Fallback) — uses LLM to describe the screen
+# Only used when OpenClaw's image pipeline fails (e.g. wrong imageModel configured).
+# NOT needed if OpenClaw has a properly configured vision-capable imageModel.
+#
 vision:
-  force_text_mode: false       # If true, daemon extracts context locally and sends ONLY text to OpenClaw. Solves "unknown entries (image)" error on text-only models.
   provider:
-    # type: "openai" # openai | anthropic | google | ollama | openrouter | mistral | together | xai | custom
-    # url: "" # leave empty for default URL, fill in to override
-    # api_key: ""
-    # model: ""
+    # type: "ollama"   # openai | anthropic | google | ollama | openrouter | mistral | together | xai | custom
+    # url: ""          # leave empty for default URL, fill in to override (e.g. http://192.168.1.50:11434)
+    # api_key: ""      # leave empty for local Ollama
+    # model: ""        # e.g. llava:13b, gpt-4o, gemini-2.0-flash
     # timeout_seconds: 30

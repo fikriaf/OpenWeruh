@@ -119,7 +119,8 @@ openweruh/
 
 *   **Change Detection (`pHash`)**: Ensures the agent is only called when significant visual changes occur, minimizing API costs and performance overhead.
 *   **Decoupled Operation**: Does not conflict with existing OpenClaw skills or crons.
-*   **Vision Provider Fallback**: If OpenClaw's internal image pipeline drops the frame or lacks a configured vision model, OpenWeruh automatically falls back to OpenAI, Anthropic, Google Gemini, Ollama, or custom providers.
+*   **Text-Only Mode (OCR Scanning)**: For text-only LLMs (which crash with `unknown entries (image)`), OpenWeruh extracts visible text using a local OCR library (Tesseract or EasyOCR) — no LLM needed, no API costs, fully offline.
+*   **Vision Provider Fallback**: If OpenClaw's internal image pipeline fails, OpenWeruh falls back to sending a text description via an LLM (OpenAI, Anthropic, Google Gemini, Ollama, etc.).
 
 ---
 
@@ -241,55 +242,43 @@ python daemon/weruh.py setup
 ```
 
 **Interactive Setup Example:**
-```text
+```
 OpenWeruh Setup
-───────────────
-? Where is your OpenClaw Gateway running?
-  ❯ On this same machine (local)
-    On a remote server (SSH tunnel)
-    On a remote server (public URL / Tailscale)
+────────────────
 
-? Gateway URL: http://127.0.0.1:18789
+  ? Where is your OpenClaw Gateway running?
+
+    1) On this same machine (local)
+  > 2) On a remote server (SSH tunnel)
+    3) On a remote server (public URL / Tailscale)
+
+  [↑/↓ navigate   Enter confirm]
+
+? Gateway URL [http://127.0.0.1:18789]:
 ? Hook token (from openclaw.json → hooks.token): ****
 
-? Has your OpenClaw already been configured with a vision-capable imageModel?
-  ❯ Yes — I have already set an imageModel (primary path is sufficient)
-    Not sure — add a fallback vision provider
+  ? How should screen content be analyzed?
 
-[If fallback selected:]
+  > 1) OpenClaw has a vision-capable AI model (send image directly — recommended)
+    2) Text-Only Mode: extract visible TEXT via OCR library (no LLM needed)
+    3) Text-Only Mode: use Vision API/LLM to DESCRIBE the screen (fallback if OpenClaw fails)
 
-? Choose a vision provider:
-  ❯ Ollama (local, full privacy)
-    OpenAI (GPT-4o / GPT-4.1)
-    Anthropic (Claude Sonnet / Haiku)
-    Google (Gemini Flash / Pro)
-    OpenRouter (access 200+ models via one API)
-    Mistral (Pixtral)
-    Together AI (Llama Vision)
-    xAI (Grok Vision)
-    Custom / Self-hosted (LiteLLM, vLLM, LMStudio, Azure, etc.)
+  [↑/↓ navigate   Enter confirm]
 
-[Example — Anthropic selected:]
+[Option 2 — OCR selected:]
 
-? Anthropic API Key: sk-ant-****
-? Model [claude-sonnet-4-6]:
-? Override URL? (leave empty for default https://api.anthropic.com):
+  ? Choose an OCR library:
 
-✓ Connection to Anthropic... success (claude-sonnet-4-6 supports vision)
-✓ Vision provider configured as fallback
+  > 1) Tesseract OCR (pytesseract) — fastest
+    2) EasyOCR — better for complex layouts, slower
 
-[Example — Custom selected:]
+  [↑/↓ navigate   Enter confirm]
 
-? Provider URL: http://192.168.1.50:11434/api/chat
-? API Key (leave empty if not required):
-? Model name: llava:13b
-? API format:
-  ❯ OpenAI-compatible
-    Anthropic-compatible
-    Google Gemini-compatible
+? OCR language codes (e.g. eng, eng+ind, eng+ara) [eng+ind]:
 
-✓ Connection test... success
-✓ Custom provider configured as fallback
+  [OK] Text-Only Mode enabled using pytesseract. OpenClaw will receive plain text.
+  [OK] Configuration saved to ~/.config/openweruh/weruh.yaml
+  [OK] OpenWeruh is ready. Run: python daemon/weruh.py start
 ```
 
 Configuration is automatically saved to `~/.config/openweruh/weruh.yaml` with strict permission `600`. API keys are masked when displayed in the CLI. *(Alternatively, you can still edit the YAML file manually if you prefer).*
@@ -323,22 +312,41 @@ openclaw system event --text "[WERUH] Screen context: user is reading about X" -
 
 ---
 
-## Vision Provider Fallback
+## Text-Only Mode & Vision Provider
 
-If your OpenClaw server's `imageModel` is not configured correctly, or you are experiencing pipeline drops, OpenWeruh includes an internal Vision Adapter.
+OpenWeruh handles screen analysis in two distinct modes — choose based on your OpenClaw setup:
 
-By defining a fallback provider in `weruh.yaml`, the daemon will process the image locally into a text description *before* sending it to the OpenClaw webhook.
+### Text-Only Mode (OCR) — Recommended for Text-Only LLMs
 
-Example for **Google Gemini**:
+If your OpenClaw agent uses a purely text-based LLM (e.g. `step-3.5-flash`), sending images will cause the `tools.profile allowlist contains unknown entries (image)` error. 
+
+OpenWeruh solves this by extracting visible text from screenshots using a local OCR library — no LLM needed, no API costs, fully offline.
+
 ```yaml
-vision:
-  provider:
-    type: "google"
-    api_key: "AIzaSy..."
-    model: "gemini-2.5-flash"
+ocr:
+  enabled: true
+  library: "pytesseract"   # pytesseract (fast) | easyocr (accurate)
+  lang: "eng+ind"          # language codes
 ```
 
-Example for **Ollama (Fully Local)**:
+**Installation:**
+```bash
+# Tesseract OCR (recommended — fast)
+pip install pytesseract pillow
+# Windows: choco install tesseract -y
+# macOS:  brew install tesseract
+# Linux:  sudo apt install tesseract-ocr
+
+# OR EasyOCR (better accuracy on complex layouts, slower)
+pip install easyocr
+```
+
+### Vision Provider (Fallback) — Only When OpenClaw Image Pipeline Fails
+
+If OpenClaw is configured with a vision-capable `imageModel` but the image pipeline fails (e.g. wrong model, dropped frames), OpenWeruh can fall back to a configured Vision Provider to generate a text description.
+
+This is **not** a primary mode — it only activates when OpenClaw's webhook returns an error.
+
 ```yaml
 vision:
   provider:
@@ -347,7 +355,7 @@ vision:
     model: "llava:13b"
 ```
 
-**Supported providers:**
+**Supported providers for fallback:**
 <br/>
 <div align="center">
   <img src="assets/openai_logo.svg" height="28" alt="OpenAI" />
@@ -376,7 +384,7 @@ Data never leaves your machine without explicit permission.
 
 ## Roadmap
 
-- [x] **v0.1**: Foundation (Python daemon, pHash detection, SKILL.md, Webhook integration).
+- [x] **v0.1**: Foundation (Python daemon, pHash detection, SKILL.md, Webhook integration, OCR Text-Only Mode).
 - [ ] **v0.2**: Vision Intelligence enhancements (Multi-provider fallback support integration, daily summary crons).
 - [ ] **v0.3**: Advanced Context (Session goals, browser extensions for DOM context, history dashboard).
 

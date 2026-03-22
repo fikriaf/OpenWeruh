@@ -7,31 +7,108 @@ import httpx
 from capture import ScreenCapturer
 from trigger import trigger_agent_with_image, trigger_agent_with_text
 from vision import VisionProviderAdapter
+from ocr import OCRProcessor
 
 
 def setup_windows_ansi():
-    """Enable ANSI escape codes on Windows CMD / PowerShell."""
     if sys.platform == "win32":
         try:
             import ctypes
 
             kernel32 = ctypes.windll.kernel32
-            # Enable ENABLE_VIRTUAL_TERMINAL_PROCESSING (0x0004)
             kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
         except Exception:
             pass
 
 
-# ANSI color codes
-RED_ORANGE = "\033[38;2;255;90;20m"  # #FF5A14 — vivid red-orange
-INDIGO = "\033[38;2;63;0;255m"  # #3F00FF — indigo / nila biru
+def _read_key():
+    if sys.platform == "win32":
+        import msvcrt
+
+        ch = msvcrt.getch()
+        if ch == b"\xe0":
+            ch = msvcrt.getch()
+            if ch == b"H":
+                return "up"
+            elif ch == b"P":
+                return "down"
+            return "ignore"
+        elif ch in (b"\r", b"\n"):
+            return "enter"
+        elif ch == b"\x03":
+            raise KeyboardInterrupt
+        return "ignore"
+    else:
+        import tty, termios
+
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            if ch == "\x1b":
+                nxt = sys.stdin.read(1)
+                if nxt == "[":
+                    arr = sys.stdin.read(1)
+                    if arr == "A":
+                        return "up"
+                    elif arr == "B":
+                        return "down"
+                return "ignore"
+            elif ch in ("\r", "\n"):
+                return "enter"
+            elif ch == "\x03":
+                raise KeyboardInterrupt
+            return "ignore"
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+def get_choice(prompt, choices):
+    setup_windows_ansi()
+    selected = 0
+    total_lines = len(choices) + 3
+
+    def clear():
+        for _ in range(total_lines):
+            sys.stdout.write("\033[1A\033[2K")
+        sys.stdout.flush()
+
+    def render():
+        clear()
+        print()
+        print(f"  {prompt}")
+        print()
+        for i, choice in enumerate(choices):
+            arrow = "\033[36m>\033[0m " if i == selected else "  "
+            print(f"  {arrow}{choice}")
+        print()
+        print(
+            "  \033[90m[\u2191\u2193 navigate   \033[36mEnter\033[0m\033[90m confirm\033[0m"
+        )
+
+    render()
+    while True:
+        try:
+            key = _read_key()
+            if key == "up":
+                selected = (selected - 1) % len(choices)
+                render()
+            elif key == "down":
+                selected = (selected + 1) % len(choices)
+                render()
+            elif key == "enter":
+                print()
+                return selected
+        except KeyboardInterrupt:
+            print("\n\nSetup cancelled.")
+            sys.exit(1)
+
+
+RED_ORANGE = "\033[38;2;255;90;20m"
+INDIGO = "\033[38;2;63;0;255m"
 RESET = "\033[0m"
-
-
-# ASCII art split into individual word rows.
-# Each line is split at the natural gap between "OPEN" and "WERUH".
-# The banner is 87 chars wide; "OPEN" occupies cols 0-43, "WERUH" cols 44+.
-SPLIT = 40  # character index where WERUH starts
+SPLIT = 40
 
 BANNER_LINES = [
     r" $$$$$$\  $$$$$$$\  $$$$$$$$\ $$\   $$\ $$\      $$\ $$$$$$$$\ $$$$$$$\  $$\   $$\ $$\   $$\ ",
@@ -45,14 +122,8 @@ BANNER_LINES = [
 ]
 
 
-def colorize_line(line: str) -> str:
-    """
-    Color the OPEN portion (left) red-orange and
-    the WERUH portion (right) indigo-blue.
-    """
-    left = line[:SPLIT]
-    right = line[SPLIT:]
-    return f"{RED_ORANGE}{left}{RESET}{INDIGO}{right}{RESET}"
+def colorize_line(line):
+    return f"{RED_ORANGE}{line[:SPLIT]}{RESET}{INDIGO}{line[SPLIT:]}{RESET}"
 
 
 def print_banner():
@@ -64,14 +135,11 @@ def print_banner():
 
 
 def load_config():
-    # Use environment variable or default
     config_path = os.environ.get(
         "OPENWERUH_CONFIG", os.path.expanduser("~/.config/openweruh/weruh.yaml")
     )
     if not os.path.exists(config_path):
-        print(
-            f"Config not found at {config_path}. Falling back to example config if exists..."
-        )
+        print(f"Config not found at {config_path}.")
         config_path = os.path.join(
             os.path.dirname(__file__), "..", "config", "weruh.example.yaml"
         )
@@ -83,24 +151,7 @@ def load_config():
         return yaml.safe_load(f)
 
 
-def get_choice(prompt, choices):
-    print(prompt)
-    for i, choice in enumerate(choices, 1):
-        print(f"  {i}) {choice}")
-    while True:
-        try:
-            val = int(input(f"\nSelect an option (1-{len(choices)}): "))
-            if 1 <= val <= len(choices):
-                return val - 1
-            print("Invalid choice. Try again.")
-        except ValueError:
-            print("Please enter a number.")
-        except KeyboardInterrupt:
-            print("\nSetup cancelled.")
-            sys.exit(1)
-
-
-def test_gateway_connection(url: str, token: str) -> bool:
+def test_gateway_connection(url, token):
     print("\nTesting Gateway connection...")
     headers = {}
     if token:
@@ -118,41 +169,31 @@ def test_gateway_connection(url: str, token: str) -> bool:
             )
 
             if response.status_code in [401, 403]:
-                print(f"❌ Error: Authentication failed (HTTP {response.status_code}).")
-                print(f"   Server says: {response.text}")
-                print("   Check your hook token!")
+                print(f"  [X] Authentication failed (HTTP {response.status_code}).")
+                print(f"      {response.text}")
+                print("      Check your hook token!")
                 return False
             elif response.status_code == 404:
-                print(f"❌ Error: Webhook endpoint not found (HTTP 404).")
-                print("   Check your Gateway URL or ensure 'hooks.enabled' is true.")
+                print(f"  [X] Webhook endpoint not found (HTTP 404).")
+                print("      Check your Gateway URL or ensure 'hooks.enabled' is true.")
                 return False
             elif response.status_code == 400:
-                # 400 could be a validation error (e.g. sessionKey not allowed) or a missing token error
                 text = response.text.lower()
-                if (
-                    "token" in text
-                    or "auth" in text
-                    or "unauthorized" in text
-                    or "missing" in text
-                ):
-                    print(f"❌ Error: Authentication failed (HTTP 400).")
-                    print(f"   Server says: {response.text}")
+                if "token" in text or "auth" in text or "unauthorized" in text:
+                    print(f"  [X] Authentication failed (HTTP 400).")
+                    print(f"      {response.text}")
                     return False
-                print(
-                    f"✓ Gateway connection successful! (Server returned 400, but auth passed: {response.text})"
-                )
+                print("  [OK] Gateway connection successful (auth passed).")
                 return True
             elif response.status_code == 200:
-                print("✓ Gateway connection and authentication successful!")
+                print("  [OK] Gateway connection and authentication successful!")
                 return True
             else:
-                print(
-                    f"⚠️ Warning: Unexpected response HTTP {response.status_code}: {response.text}"
-                )
+                print(f"  [!] Unexpected HTTP {response.status_code}: {response.text}")
                 return True
     except httpx.RequestError as e:
-        print(f"❌ Error: Cannot connect to Gateway ({e}).")
-        print("   Is OpenClaw running? Is the URL correct?")
+        print(f"  [X] Cannot connect to Gateway ({e}).")
+        print("      Is OpenClaw running? Is the URL correct?")
         return False
 
 
@@ -160,7 +201,6 @@ def run_setup():
     print_banner()
 
     try:
-        # 1. Gateway Location
         while True:
             gw_idx = get_choice(
                 "? Where is your OpenClaw Gateway running?",
@@ -170,23 +210,18 @@ def run_setup():
                     "On a remote server (public URL / Tailscale)",
                 ],
             )
-
             mode = ["local", "tunnel", "remote"][gw_idx]
-
             default_url = "http://127.0.0.1:18789" if mode != "remote" else "https://"
             url = input(f"? Gateway URL [{default_url}]: ").strip() or default_url
-
             token = getpass.getpass(
-                "? Hook token (from openclaw.json → hooks.token): "
+                "? Hook token (from openclaw.json \u2192 hooks.token): "
             ).strip()
             if not token:
-                print("❌ Error: Hook token cannot be empty! You must enter the token.")
-                print("\nLet's try configuring the Gateway again.\n")
+                print("  [X] Hook token cannot be empty!\n")
                 continue
 
             if test_gateway_connection(url, token):
                 break
-
             print("\nLet's try configuring the Gateway again.\n")
 
         config = {
@@ -205,54 +240,82 @@ def run_setup():
             },
         }
 
-        # 2. Vision Provider
         print()
         vision_idx = get_choice(
-            "? How should the screen be analyzed?",
+            "? How should screen content be analyzed?",
             [
-                "Send images directly to OpenClaw (requires OpenClaw to have a vision-capable AI model)",
-                "Pre-process locally via API/Ollama and send ONLY TEXT to OpenClaw (solves 'unknown entries: image' error)",
-                "Send images directly, but fallback to local text processing if OpenClaw fails",
+                "OpenClaw has a vision-capable AI model (send image directly \u2014 recommended)",
+                "Text-Only Mode: extract visible TEXT via OCR library (no LLM needed)",
+                "Text-Only Mode: use Vision API/LLM to DESCRIBE the screen (fallback if OpenClaw fails)",
             ],
         )
 
-        force_text = False
-        if vision_idx == 1:
-            force_text = True
+        if vision_idx == 0:
+            print("  [OK] OpenClaw will receive raw images.")
+            print(
+                "       Make sure your OpenClaw is configured with a vision-capable imageModel."
+            )
+            print(
+                "       Daemon will auto-fallback to vision.provider if OpenClaw returns an error."
+            )
 
-        if vision_idx in [1, 2]:
+        elif vision_idx == 1:
+            print()
+            ocr_lib_idx = get_choice(
+                "? Choose an OCR library:",
+                [
+                    "Tesseract OCR (pytesseract) \u2014 fastest",
+                    "EasyOCR \u2014 better for complex layouts, slower",
+                ],
+            )
+            ocr_lib = "pytesseract" if ocr_lib_idx == 0 else "easyocr"
+
+            lang = (
+                input(
+                    "? OCR language codes (e.g. eng, eng+ind, eng+ara) [eng+ind]: "
+                ).strip()
+                or "eng+ind"
+            )
+            if ocr_lib == "pytesseract":
+                print("  [INFO] Tesseract OCR requires system binaries installed:")
+                print("         Windows: choco install tesseract -y")
+                print("         macOS:   brew install tesseract")
+                print("         Linux:   sudo apt install tesseract-ocr")
+
+            config["ocr"] = {
+                "enabled": True,
+                "library": ocr_lib,
+                "lang": lang,
+            }
+            config["vision"] = {"provider": {}}
+            print(
+                f"\n  [OK] Text-Only Mode enabled using {ocr_lib}. OpenClaw will receive plain text."
+            )
+
+        elif vision_idx == 2:
             print()
             providers = [
                 ("ollama", "Ollama (local, full privacy)"),
                 ("openai", "OpenAI (GPT-4o / GPT-4.1)"),
                 ("anthropic", "Anthropic (Claude Sonnet / Haiku)"),
-                (
-                    "google",
-                    "Google (Gemini Flash / Pro) - *Recommended for fast/free OCR*",
-                ),
-                ("openrouter", "OpenRouter (access 200+ models via one API)"),
+                ("google", "Google (Gemini Flash / Pro)"),
+                ("openrouter", "OpenRouter (access 200+ models)"),
                 ("mistral", "Mistral (Pixtral)"),
                 ("together", "Together AI (Llama Vision)"),
                 ("xai", "xAI (Grok Vision)"),
-                (
-                    "custom",
-                    "Custom / Self-hosted (LiteLLM, vLLM, LMStudio, Azure, etc.)",
-                ),
+                ("custom", "Custom / Self-hosted (LiteLLM, vLLM, Azure, etc.)"),
             ]
-            p_idx = get_choice(
-                "? Choose a vision/OCR provider:", [p[1] for p in providers]
-            )
+            p_idx = get_choice("? Choose a vision provider:", [p[1] for p in providers])
             provider_type = providers[p_idx][0]
 
             api_key = ""
-            if provider_type not in ["ollama"]:
+            if provider_type != "ollama":
                 api_key = getpass.getpass(f"? {provider_type.capitalize()} API Key: ")
 
-            model = input("? Model name (e.g., gemini-2.5-flash, llava:13b): ").strip()
+            model = input("? Model name (e.g. gemini-2.5-flash, llava:13b): ").strip()
             override_url = input("? Override URL? (leave empty for default): ").strip()
 
             config["vision"] = {
-                "force_text_mode": force_text,
                 "provider": {
                     "type": provider_type,
                     "api_key": api_key,
@@ -260,15 +323,59 @@ def run_setup():
                     "url": override_url,
                 },
             }
-            print(
-                f"\n✓ {provider_type.capitalize()} provider configured for {'Text-Only Mode' if force_text else 'Fallback Mode'}."
-            )
-        else:
-            print(
-                "\n✓ Proceeding with direct OpenClaw image payloads (no local processing)."
+            print(f"\n  [OK] Vision provider ({provider_type}) configured.")
+
+        if vision_idx in [0, 2]:
+            print()
+            use_fb = (
+                get_choice(
+                    "? Configure a fallback Vision Provider for when OpenClaw image pipeline fails?",
+                    [
+                        "No \u2014 only use OpenClaw directly (skip frame on failure)",
+                        "Yes \u2014 add Ollama / API as fallback (recommended)",
+                    ],
+                )
+                == 1
             )
 
-        # Save to ~/.config/openweruh/weruh.yaml
+            if use_fb:
+                print()
+                providers = [
+                    ("ollama", "Ollama (local, full privacy)"),
+                    ("openai", "OpenAI"),
+                    ("anthropic", "Anthropic"),
+                    ("google", "Google Gemini"),
+                    ("openrouter", "OpenRouter"),
+                    ("mistral", "Mistral"),
+                    ("together", "Together AI"),
+                    ("xai", "xAI"),
+                    ("custom", "Custom / Self-hosted"),
+                ]
+                p_idx = get_choice(
+                    "? Choose fallback provider:", [p[1] for p in providers]
+                )
+                provider_type = providers[p_idx][0]
+
+                api_key = ""
+                if provider_type != "ollama":
+                    api_key = getpass.getpass(
+                        f"? {provider_type.capitalize()} API Key: "
+                    )
+
+                model = input("? Model name: ").strip()
+                override_url = input(
+                    "? Override URL? (leave empty for default): "
+                ).strip()
+
+                config.setdefault("vision", {"provider": {}})
+                config["vision"]["provider"] = {
+                    "type": provider_type,
+                    "api_key": api_key,
+                    "model": model,
+                    "url": override_url,
+                }
+                print(f"\n  [OK] Fallback provider ({provider_type}) configured.")
+
         config_dir = os.path.expanduser("~/.config/openweruh")
         os.makedirs(config_dir, exist_ok=True)
         config_path = os.path.join(config_dir, "weruh.yaml")
@@ -276,14 +383,13 @@ def run_setup():
         with open(config_path, "w") as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
-        # Try to set permissions securely (Unix only)
         try:
             os.chmod(config_path, 0o600)
         except OSError:
             pass
 
-        print(f"\n✓ Configuration saved securely to {config_path}")
-        print("✓ OpenWeruh is ready. Run: python daemon/weruh.py start\n")
+        print(f"\n  [OK] Configuration saved to {config_path}")
+        print("  [OK] OpenWeruh is ready. Run: python daemon/weruh.py start\n")
 
     except KeyboardInterrupt:
         print("\nSetup cancelled.")
@@ -305,54 +411,83 @@ def main():
 
     capturer = ScreenCapturer(threshold=threshold)
     vision_adapter = VisionProviderAdapter(config)
+    ocr_processor = OCRProcessor(config)
 
+    force_text = config.get("vision", {}).get("force_text_mode", False)
+    use_ocr = ocr_processor.is_available()
+    use_vision_fallback = vision_adapter.enabled
+
+    mode_desc = (
+        "OCR Text-Only Mode"
+        if use_ocr
+        else (
+            "Vision API Text-Only Mode"
+            if (force_text and use_vision_fallback)
+            else "Direct Image Mode"
+        )
+    )
     print(
-        f"[OpenWeruh] Running capture loop every {interval}s with threshold {threshold}..."
+        f"[OpenWeruh] Mode: {mode_desc} | Capture every {interval}s | Threshold: {threshold}"
     )
 
     try:
         while True:
             changed, frame_path = capturer.capture()
             if changed and frame_path:
-                print("[OpenWeruh] Screen changed, processing frame...")
+                if use_ocr:
+                    print("[OpenWeruh] Screen changed \u2014 scanning text via OCR...")
+                    text = ocr_processor.scan(frame_path)
+                    if text:
+                        snippet = text[:120] + ("..." if len(text) > 120 else "")
+                        print(f"[OpenWeruh] Extracted: {snippet}")
+                        trigger_agent_with_text(text, config)
+                    else:
+                        print("[OpenWeruh] OCR extracted no text from this frame.")
 
-                # Check if user wants to pre-process the image into text before sending to OpenClaw
-                force_text = config.get("vision", {}).get("force_text_mode", False)
-
-                if force_text and vision_adapter.enabled:
+                elif force_text and use_vision_fallback:
                     print(
-                        "[OpenWeruh] Text-Only Mode active. Scanning visual context locally..."
+                        "[OpenWeruh] Screen changed \u2014 analyzing via Vision API..."
                     )
                     description = vision_adapter.analyze(frame_path)
                     if description:
-                        print(f"[OpenWeruh] Extracted context: {description}")
+                        snippet = description[:120] + (
+                            "..." if len(description) > 120 else ""
+                        )
+                        print(f"[OpenWeruh] Vision: {snippet}")
                         trigger_agent_with_text(description, config)
                     else:
-                        print("[OpenWeruh] Vision Provider failed to extract context.")
+                        print(
+                            "[OpenWeruh] Vision provider failed to generate description."
+                        )
+
                 else:
-                    print("[OpenWeruh] Sending image payload directly to OpenClaw...")
+                    print(
+                        "[OpenWeruh] Screen changed \u2014 sending image to OpenClaw..."
+                    )
                     success = trigger_agent_with_image(frame_path, config)
 
-                    if not success and vision_adapter.enabled:
+                    if not success and use_vision_fallback:
                         print(
-                            "[OpenWeruh] Primary webhook failed, falling back to Vision Provider..."
+                            "[OpenWeruh] OpenClaw failed \u2014 falling back to Vision Provider..."
                         )
                         description = vision_adapter.analyze(frame_path)
                         if description:
-                            print(f"[OpenWeruh] Vision description: {description}")
+                            snippet = description[:120] + (
+                                "..." if len(description) > 120 else ""
+                            )
+                            print(f"[OpenWeruh] Fallback: {snippet}")
                             trigger_agent_with_text(description, config)
                         else:
-                            print(
-                                "[OpenWeruh] Vision Provider failed to generate description."
-                            )
+                            print("[OpenWeruh] Vision Provider failed. Skipping frame.")
                     elif not success:
                         print(
-                            "[OpenWeruh] Webhook failed, no Vision Provider configured. Skipping frame."
+                            "[OpenWeruh] Webhook failed. No fallback configured. Skipping frame."
                         )
+
             time.sleep(interval)
 
     except KeyboardInterrupt:
-        print("[OpenWeruh] Exiting daemon...")
+        print("\n[OpenWeruh] Exiting...")
     finally:
         capturer.close()
 
