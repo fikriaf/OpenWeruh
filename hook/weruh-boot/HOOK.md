@@ -2,7 +2,7 @@
 name: weruh-boot
 description: Inject OpenWeruh screen context capability at gateway startup
 events:
-  - gateway:startup
+  - "gateway:startup"
 version: 1.0.0
 ---
 
