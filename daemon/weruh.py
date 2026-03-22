@@ -159,7 +159,8 @@ def _password(prompt, default_masked="***"):
 
 
 def _preflight_check():
-    issues = []
+    import json
+    import shutil
 
     if sys.platform == "win32":
         claw_dir = os.path.join(os.environ.get("USERPROFILE", ""), ".openclaw")
@@ -167,33 +168,31 @@ def _preflight_check():
         claw_dir = os.path.expanduser("~/.openclaw")
     claw_config = os.path.join(claw_dir, "openclaw.json")
 
+    issues = []
+
     if os.path.exists(claw_config):
         try:
             with open(claw_config) as f:
-                content = f.read()
-                if "tools.profile" in content:
-                    import json
+                cfg = json.load(f)
 
-                    cfg = json.loads(content)
-                    profile = cfg.get("tools", {}).get("profile", "")
-                    if profile == "coding":
-                        issues.append(
-                            "OpenClaw tools.profile is set to 'coding' which may cause "
-                            "'unknown entries (image)' errors with text-only models."
-                        )
-                    if "plugins" in cfg:
-                        plugins = cfg.get("plugins", {})
-                        entries = plugins.get("entries", {})
-                        if "openweruh" in entries:
-                            issues.append(
-                                "OpenClaw plugins.entries has a stale 'openweruh' entry "
-                                "that will cause a warning on every startup."
-                            )
+            profile = cfg.get("tools", {}).get("profile", "")
+            if profile == "coding":
+                issues.append(
+                    "OpenClaw tools.profile is 'coding' — may cause 'unknown entries (image)' "
+                    "errors with text-only models. Can be changed to 'minimal'."
+                )
+
+            entries = cfg.get("plugins", {}).get("entries", {})
+            if "openweruh" in entries:
+                issues.append(
+                    "plugins.entries has stale 'openweruh' entry — causes warning on every OpenClaw startup."
+                )
         except Exception:
             pass
 
     skill_src = os.path.join(os.path.dirname(__file__), "..", "skill", "openweruh")
     hook_src = os.path.join(os.path.dirname(__file__), "..", "hook", "weruh-boot")
+
     if not (os.path.exists(skill_src) and os.path.exists(hook_src)):
         return issues
 
@@ -214,76 +213,61 @@ def _preflight_check():
     if not issues:
         return issues
 
-    print_banner()
     print()
     print("  \033[33m[!] Pre-flight check found issues:\033[0m")
-    for i, issue in enumerate(issues, 1):
-        print(f"  {i}) {issue}")
+    for issue in issues:
+        print(f"  \033[90m-\033[0m {issue}")
     print()
-    fix_now = input("  Fix issues now? (Y/n): ").strip().lower()
+    fix_now = (
+        input("  Fix issues automatically? (Y = fix & continue, n = skip): ")
+        .strip()
+        .lower()
+    )
+
     if fix_now in ("n", "no"):
-        print("  Skipped. You can fix these manually later.\n")
+        print("  \033[90mSkipped. Fix manually after setup.\033[0m\n")
         return issues
 
-    if sys.platform == "win32":
-        import shutil
+    if os.path.exists(claw_config):
+        try:
+            with open(claw_config) as f:
+                cfg = json.load(f)
 
-        if os.path.exists(claw_config):
+            changed = False
+
+            if cfg.get("tools", {}).get("profile") == "coding":
+                cfg.setdefault("tools", {})["profile"] = "minimal"
+                changed = True
+                print("  \033[32m[OK]\033[0m tools.profile \u2192 minimal")
+
+            entries = cfg.get("plugins", {}).get("entries", {})
+            if "openweruh" in entries:
+                del entries["openweruh"]
+                cfg["plugins"]["entries"] = entries
+                changed = True
+                print("  \033[32m[OK]\033[0m Removed stale plugins.entries.openweruh")
+
+            if changed:
+                with open(claw_config, "w") as f:
+                    json.dump(cfg, f, indent=2)
+                print(
+                    "  \033[33m[!]\033[0m OpenClaw config updated. Run 'openclaw restart' to apply."
+                )
+        except Exception as e:
+            print(f"  \033[91m[X]\033[0m Could not update OpenClaw config: {e}")
+
+    for src, dst in [(skill_src, skill_dest), (hook_src, hook_dest)]:
+        if os.path.exists(src) and not os.path.exists(dst):
             try:
-                import json
-
-                cfg = json.loads(open(claw_config).read())
-                changed = False
-
-                if cfg.get("tools", {}).get("profile") == "coding":
-                    cfg.setdefault("tools", {})["profile"] = "minimal"
-                    changed = True
-                    print("  [OK] tools.profile changed to 'minimal'")
-
-                entries = cfg.get("plugins", {}).get("entries", {})
-                if "openweruh" in entries:
-                    del entries["openweruh"]
-                    cfg["plugins"]["entries"] = entries
-                    changed = True
-                    print("  [OK] Removed stale plugins.entries.openweruh")
-
-                if changed:
-                    with open(claw_config, "w") as f:
-                        json.dump(cfg, f, indent=2)
-                    print(
-                        "  [OK] OpenClaw config updated. Restart OpenClaw with: openclaw restart"
-                    )
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copytree(src, dst)
+                print(
+                    f"  \033[32m[OK]\033[0m Copied {os.path.basename(src)} to OpenClaw."
+                )
             except Exception as e:
-                print(f"  [!] Could not update OpenClaw config: {e}")
-                print("     Please fix manually.")
-
-        for src, dst in [(skill_src, skill_dest), (hook_src, hook_dest)]:
-            if os.path.exists(src) and not os.path.exists(dst):
-                try:
-                    os.makedirs(os.path.dirname(dst), exist_ok=True)
-                    shutil.copytree(src, dst)
-                    print(
-                        f"  [OK] Copied {os.path.basename(src)} to OpenClaw directories."
-                    )
-                except Exception as e:
-                    print(f"  [!] Could not copy {src}: {e}")
-
-    else:
-        for src, dst in [(skill_src, skill_dest), (hook_src, hook_dest)]:
-            if os.path.exists(src) and not os.path.exists(dst):
-                try:
-                    os.makedirs(os.path.dirname(dst), exist_ok=True)
-                    import shutil
-
-                    shutil.copytree(src, dst)
-                    print(
-                        f"  [OK] Copied {os.path.basename(src)} to OpenClaw directories."
-                    )
-                except Exception as e:
-                    print(f"  [!] Could not copy {src}: {e}")
+                print(f"  \033[91m[X]\033[0m Could not copy {src}: {e}")
 
     print()
-    print("  Pre-flight complete. Continuing setup...\n")
 
 
 def run_setup():
