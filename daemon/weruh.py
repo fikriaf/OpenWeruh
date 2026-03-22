@@ -80,43 +80,55 @@ def load_config():
 
 def test_gateway_connection(url, token):
     print("\nTesting Gateway connection...")
-    headers = {}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
     try:
-        with httpx.Client(timeout=5) as client:
+        with httpx.Client(timeout=10) as client:
             payload = {
                 "message": "[WERUH] Connection test",
                 "name": "OpenWeruh Setup",
                 "channel": "last",
             }
-            response = client.post(
-                f"{url.rstrip('/')}/hooks/agent", json=payload, headers=headers
-            )
+            auth_methods = [
+                {"Authorization": f"Bearer {token}"},
+                {"x-openclaw-token": token},
+            ]
 
-            if response.status_code in [401, 403]:
-                print(f"  [X] Authentication failed (HTTP {response.status_code}).")
-                print(f"      {response.text}")
-                print("      Check your hook token!")
+            last_err = None
+            for auth_headers in auth_methods:
+                response = client.post(
+                    f"{url.rstrip('/')}/hooks/agent",
+                    json=payload,
+                    headers={"Content-Type": "application/json", **auth_headers},
+                )
+                if response.status_code == 200:
+                    print("  [OK] Gateway connection and authentication successful!")
+                    return True
+                last_err = (response.status_code, response.text)
+
+            status, body = last_err
+            if status == 401:
+                print(f"  [X] Authentication failed (HTTP 401).")
+                print(f"      {body}")
+                print()
+                print(
+                    "  \033[33m!\033[0m  Make sure you set the correct \033[1mhooks.token\033[0m."
+                )
+                print(
+                    "  \033[90m  The web UI token (#token=... in URL) is NOT the hooks token."
+                )
+                print("  \033[90m  Run in OpenClaw: openclaw config get hooks.token")
+                print("  \033[90m  Or check openclaw.json → hooks.token")
                 return False
-            elif response.status_code == 404:
+            elif status == 403:
+                print(f"  [X] Forbidden (HTTP 403).")
+                print(f"      {body}")
+                print("      Check if hooks are enabled in OpenClaw config.")
+                return False
+            elif status == 404:
                 print(f"  [X] Webhook endpoint not found (HTTP 404).")
-                print("      Check your Gateway URL or ensure 'hooks.enabled' is true.")
+                print("      Check Gateway URL or ensure 'hooks.enabled' is true.")
                 return False
-            elif response.status_code == 400:
-                text = response.text.lower()
-                if "token" in text or "auth" in text or "unauthorized" in text:
-                    print(f"  [X] Authentication failed (HTTP 400).")
-                    print(f"      {response.text}")
-                    return False
-                print("  [OK] Gateway connection successful (auth passed).")
-                return True
-            elif response.status_code == 200:
-                print("  [OK] Gateway connection and authentication successful!")
-                return True
             else:
-                print(f"  [!] Unexpected HTTP {response.status_code}: {response.text}")
+                print(f"  [!] Unexpected HTTP {status}: {body}")
                 return True
     except httpx.RequestError as e:
         print(f"  [X] Cannot connect to Gateway ({e}).")
@@ -344,9 +356,20 @@ def run_setup():
         if existing and existing.get("gateway", {}).get("hook_token")
         else ""
     )
-    print(f"  Hook token (from openclaw.json \u2192 hooks.token)")
+    print()
+    print(
+        "  \033[33m!\033[0m  This is the \033[1mhooks.token\033[0m — NOT the web UI token."
+    )
+    print(
+        "  \033[90m  The web UI URL shows \033[36m#token=...\033[90m — that is for the browser,"
+    )
+    print(
+        "  \033[90m  NOT for webhooks. Use the value from \033[1mopenclaw.json → hooks.token\033[0m"
+    )
     print(f"    \033[90m[Enter to keep: {masked}]\033[0m")
-    new_token = getpass.getpass("    (leave empty to keep existing): ").strip()
+    new_token = getpass.getpass(
+        "  Hook token (hooks.token, NOT web UI token): "
+    ).strip()
     gw_token = (
         new_token
         if new_token
