@@ -217,7 +217,6 @@ def _show_openclaw_notes():
 
 
 def run_setup():
-    print_banner()
     _show_openclaw_notes()
 
     config_dir = os.path.expanduser("~/.config/openweruh")
