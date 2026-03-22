@@ -888,8 +888,8 @@ For security, `gateway.remote.token` is only used as a last resort when no expli
 
 | Aspect | Mode A (Local) | Mode B (SSH Tunnel) | Mode C (Remote) |
 |---|---|---|---|
-| Setup complexity | Minimal | Moderate | Moderate |
-| Skill/Hook install | Direct copy | Agent exec via webhook | Agent exec via webhook |
+| Setup complexity | Moderate | Moderate | Moderate |
+| Skill/Hook install | Agent exec via webhook | Agent exec via webhook | Agent exec via webhook |
 | Security | Local, safe | Encrypted SSH | Depends on proxy |
 | Always-on | No (requires laptop on) | Yes (VPS) | Yes (VPS) |
 | Vision fallback | Local / cloud | Local / cloud | Cloud recommended |
@@ -899,7 +899,7 @@ For security, `gateway.remote.token` is only used as a last resort when no expli
 
 ### Interactive Installer
 
-The OpenWeruh installer detects local vs. remote deployment and handles component installation accordingly:
+The OpenWeruh installer sends install commands directly to the OpenClaw agent via webhook — no special local vs. remote distinction:
 
 ```bash
 $ python daemon/weruh.py setup
@@ -916,22 +916,18 @@ OpenWeruh Setup
 
 ✓ Gateway connection successful
 
-[!] Remote mode detected.
-    OpenWeruh components will be installed on the remote server
-    after gateway connection is verified.
-
 ┌─ Screen Analysis ──────────────────────────────────────────────────┐
 ? How should screen content be analyzed?
   ❯ OpenClaw imageModel (recommended)
     Text-Only Mode: OCR (no LLM needed)
     Text-Only Mode: Vision API
 
-✓ Remote install triggered (agent will execute commands)
+✓ Install triggered (agent will execute commands)
 OpenWeruh is ready. Run: python daemon/weruh.py start
 ```
 
-**Remote install flow (Mode B / C):**  
-When a remote gateway is detected, the installer sends install instructions via the OpenClaw webhook to the agent session. The OpenClaw agent — running on the server — receives the message and executes the install commands via its `exec` tool:
+**Install flow:**  
+The installer sends install instructions via the OpenClaw webhook to the agent session. The OpenClaw agent receives the message and executes the install commands via its `exec` tool:
 
 ```bash
 git clone https://github.com/fikriaf/OpenWeruh.git
@@ -939,7 +935,7 @@ npx clawhub install openweruh --no-input
 openclaw hooks install OpenWeruh/hook/weruh-boot
 ```
 
-This means OpenWeruh components are installed **by OpenClaw itself** on the server — no SSH, no manual file transfer needed.
+This means OpenWeruh components are installed **by OpenClaw itself** — no SSH, no manual file transfer needed.
 
 ---
 

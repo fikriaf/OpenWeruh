@@ -171,7 +171,7 @@ def _password(prompt, default_masked="***"):
     return val or None
 
 
-def _install_openclaw_components_remote(config: Dict) -> str:
+def _install_openclaw_components(config: Dict):
     gateway_config = config.get("gateway", {})
     url = gateway_config.get("url", "http://127.0.0.1:18789").rstrip("/")
     token = gateway_config.get("hook_token", "")
@@ -183,12 +183,12 @@ def _install_openclaw_components_remote(config: Dict) -> str:
     agent_exec_msg = (
         "[OpenWeruh Setup] Installing OpenWeruh components on this server.\n\n"
         "IMPORTANT: Please execute the following commands using the exec tool IN ORDER:\n\n"
-        f"1. Clone the repository:\n"
-        f"   git clone https://github.com/fikriaf/OpenWeruh.git\n\n"
-        f"2. Install the skill (ClawHub):\n"
-        f"   npx clawhub install openweruh --no-input\n\n"
-        f"3. Install the hook (local path):\n"
-        f"   openclaw hooks install OpenWeruh/hook/weruh-boot\n\n"
+        "1. Clone the repository:\n"
+        "   git clone https://github.com/fikriaf/OpenWeruh.git\n\n"
+        "2. Install the skill (ClawHub):\n"
+        "   npx clawhub install openweruh --no-input\n\n"
+        "3. Install the hook (local path):\n"
+        "   openclaw hooks install OpenWeruh/hook/weruh-boot\n\n"
         "If clawhub is not installed, run first: npm install -g clawhub\n"
         "After all commands succeed, confirm by running: openclaw hooks list\n"
         "Then restart the gateway: openclaw gateway restart\n\n"
@@ -208,62 +208,10 @@ def _install_openclaw_components_remote(config: Dict) -> str:
         with httpx.Client(timeout=15) as client:
             response = client.post(f"{url}/hooks/agent", json=data, headers=headers)
             if response.status_code >= 400:
-                return f"Remote install trigger failed: HTTP {response.status_code}"
-            return "Remote install triggered (agent will execute commands)"
+                return f"Install trigger failed: HTTP {response.status_code}"
+            return "Install triggered (agent will execute commands)"
     except httpx.RequestError as e:
-        return f"Remote install webhook failed: {e}"
-
-
-def _install_openclaw_components_local():
-    import shutil
-
-    skill_src = os.path.join(os.path.dirname(__file__), "..", "skill", "openweruh")
-    hook_src = os.path.join(os.path.dirname(__file__), "..", "hook", "weruh-boot")
-
-    if sys.platform == "win32":
-        claw_dir = os.path.join(os.environ.get("USERPROFILE", ""), ".openclaw")
-    else:
-        claw_dir = os.path.expanduser("~/.openclaw")
-
-    skill_dest = os.path.join(claw_dir, "skills", "openweruh")
-    hook_dest = os.path.join(claw_dir, "hooks", "weruh-boot")
-
-    copied = []
-    for src, dst, label in [
-        (skill_src, skill_dest, "skill/openweruh"),
-        (hook_src, hook_dest, "hook/weruh-boot"),
-    ]:
-        if os.path.exists(src):
-            try:
-                if os.path.islink(dst):
-                    os.unlink(dst)
-                elif os.path.isdir(dst):
-                    try:
-                        os.rmdir(dst)
-                    except OSError:
-                        import shutil as _shutil
-
-                        _shutil.rmtree(dst)
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                shutil.copytree(src, dst)
-                copied.append(label)
-            except Exception:
-                pass
-
-    if copied:
-        return f"Installed: {', '.join(copied)}"
-    return None
-
-
-def _install_openclaw_components(config: Dict):
-    mode = config.get("gateway", {}).get("mode", "local")
-    if mode != "local":
-        result = _install_openclaw_components_remote(config)
-        if result:
-            return result
-        return None
-
-    return _install_openclaw_components_local()
+        return f"Install webhook failed: {e}"
 
 
 def _show_openclaw_notes():
@@ -355,15 +303,6 @@ def run_setup():
         "gateway": {"mode": gw_mode, "url": gw_url, "hook_token": gw_token}
     }
 
-    if gw_mode == "local":
-        _install_openclaw_components(preflight_config)
-    else:
-        print(f"\n  \033[33m[!]\033[0m Remote mode detected ({gw_url}).")
-        print("  \033[90m  OpenWeruh components will be installed on the remote server")
-        print(
-            "  \033[90m  after gateway connection is verified (see step below).\033[0m"
-        )
-
     _show_openclaw_notes()
 
     config = {
@@ -387,13 +326,9 @@ def run_setup():
             print("\n  Please fix the gateway settings and run setup again.")
             sys.exit(1)
 
-        if gw_mode != "local":
-            print(
-                "\n  \033[90mTriggering remote OpenWeruh component installation...\033[0m"
-            )
-            result = _install_openclaw_components(preflight_config)
-            if result:
-                print(f"  \033[32m[OK]\033[0m {result}")
+        result = _install_openclaw_components(preflight_config)
+        if result:
+            print(f"\n  \033[32m[OK]\033[0m {result}")
 
         _section("Screen Analysis")
 

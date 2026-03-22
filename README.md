@@ -238,8 +238,7 @@ python daemon/weruh.py setup
 
 **Setup will:**
 1. Ask gateway location (local or remote server)
-   - **Local**: auto-installs skill + hook into `~/.openclaw/` directories
-   - **Remote**: triggers OpenClaw agent to clone repo + `clawhub install` + `openclaw hooks install` (agent needs `exec` tool enabled)
+   - **All modes**: triggers OpenClaw agent to clone repo + `clawhub install` + `openclaw hooks install` (agent needs `exec` tool enabled)
 2. Show OpenClaw configuration notes (edit `openclaw.json` where OpenClaw runs)
 3. Configure Gateway URL and hook token
 4. Choose screen analysis mode (OCR, Vision API, or direct image)
