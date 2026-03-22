@@ -209,9 +209,6 @@ def _show_openclaw_notes():
     print("  See 'unknown entries (image)'?")
     print("    openclaw config set tools.profile minimal")
     print()
-    print("  See 'Skipping skill path'?")
-    print("    Copy skill folder instead of symlinking it")
-    print()
     print("  \033[90m[Press Enter to continue with OpenWeruh setup...]\033[0m")
     input()
 
