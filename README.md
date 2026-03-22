@@ -235,10 +235,30 @@ cd OpenWeruh
 
 ### Step 3: Configure the Daemon
 
-OpenWeruh provides an interactive setup script to easily configure your environment, test connections, and safely store your API keys:
+OpenWeruh provides an interactive setup script:
 
 ```bash
 python daemon/weruh.py setup
+```
+
+**Setup will:**
+1. Auto-install skill/hook into OpenClaw directories
+2. Show OpenClaw configuration notes (edit `openclaw.json` where OpenClaw runs)
+3. Configure Gateway URL and hook token
+4. Choose screen analysis mode (OCR, Vision API, or direct image)
+5. Save and summarize
+
+**OpenClaw Configuration Notes** (edit where OpenClaw runs):
+
+If Telegram messages don't reach you, edit `openclaw.json`:
+```
+channels.telegram.allowFrom = ["*"],
+channels.telegram.dmPolicy = "open"
+```
+
+If you see `'unknown entries (image)'` error:
+```
+tools.profile = "minimal"
 ```
 
 **Interactive Setup Example:**
@@ -381,47 +401,28 @@ vision:
 
 ## Troubleshooting
 
-### `tools.profile allowlist contains unknown entries (image)`
+### `'unknown entries (image)'` error
 
-**Cause:** Your OpenClaw agent profile references the `image` tool, but your current model does not support vision.
+**Cause:** Your OpenClaw agent uses `image` tool but current model does not support vision.
 
-**Solutions — pick one:**
-
-1. **Remove `image` from your agent's `tools.profile` allowlist** (recommended):
-   ```
-   openclaw config set tools.profile.allowlist "shell,grep,file.read,code"
-   # remove "image" from the list
-   ```
-
-2. **Switch to a text-only model** that doesn't require image tools:
-   ```
-   openclaw models set-current step-3.5-flash:free
-   ```
-
-3. **Set a text-only agent profile** specifically for the `hook:weruh:text` session:
-   ```
-   openclaw config set sessions.hook:weruh:text.agentProfile text-only
-   # (check your OpenClaw docs for the exact syntax)
-   ```
-
-### `lane wait exceeded` / agent is slow or stuck
-
-**Cause:** The agent session is overwhelmed by too many webhook triggers.
-
-**Fix:**
-- Increase `capture.interval_seconds` in `weruh.yaml` (e.g., `30` or `60`)
-- Increase `capture.change_threshold` to only send significant screen changes
-- Set active hours to avoid capturing during idle time
-
-### `Skipping skill path that resolves outside its configured root`
-
-**Cause:** Windows is case-sensitive with symlinks/junctions pointing to `%USERPROFILE%`.
-
-**Fix:** Copy the skill folder directly instead of using symlinks:
-```cmd
-# Instead of creating a junction, copy the folder
-xcopy /E /I skill\openweruh "%USERPROFILE%\.openclaw\skills\openweruh"
+**Fix:** Edit `openclaw.json` where OpenClaw runs:
 ```
+tools.profile = "minimal"
+```
+
+### Telegram not reaching you
+
+**Fix:** Edit `openclaw.json` where OpenClaw runs:
+```
+channels.telegram.allowFrom = ["*"],
+channels.telegram.dmPolicy = "open"
+```
+
+### Agent slow or stuck
+
+**Cause:** Too many webhook triggers per second.
+
+**Fix:** Increase `capture.interval_seconds` in `weruh.yaml` (e.g., `30` or `60`) and `capture.change_threshold`.
 
 ### Tesseract OCR not found on startup
 
