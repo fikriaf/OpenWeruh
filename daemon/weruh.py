@@ -21,91 +21,18 @@ def setup_windows_ansi():
             pass
 
 
-def _read_key():
-    if sys.platform == "win32":
-        import msvcrt
-
-        ch = msvcrt.getch()
-        if ch == b"\xe0":
-            ch = msvcrt.getch()
-            if ch == b"H":
-                return "up"
-            elif ch == b"P":
-                return "down"
-            return "ignore"
-        elif ch in (b"\r", b"\n"):
-            return "enter"
-        elif ch == b"\x03":
-            raise KeyboardInterrupt
-        return "ignore"
-    else:
-        import tty, termios
-
-        fd = sys.stdin.fileno()
-        old = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-            if ch == "\x1b":
-                nxt = sys.stdin.read(1)
-                if nxt == "[":
-                    arr = sys.stdin.read(1)
-                    if arr == "A":
-                        return "up"
-                    elif arr == "B":
-                        return "down"
-                return "ignore"
-            elif ch in ("\r", "\n"):
-                return "enter"
-            elif ch == "\x03":
-                raise KeyboardInterrupt
-            return "ignore"
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old)
-
-
 def get_choice(prompt, choices):
-    setup_windows_ansi()
-    selected = [0]
-
-    def render():
-        # move cursor up to overwrite choices only (not question)
-        sys.stdout.write(f"\033[{len(choices)}A")
-        for i, choice in enumerate(choices):
-            sys.stdout.write("\033[2K\r")
-            marker = "\033[36m>\033[0m " if i == selected[0] else "  "
-            sys.stdout.write(f"  {marker}{choice}")
-            if i < len(choices) - 1:
-                sys.stdout.write("\n")
-        sys.stdout.write("\n\033[2K\r")
-        sys.stdout.write(
-            "  \033[90m[\u2191\u2193 navigate   \033[36mEnter\033[0m\033[90m confirm\033[0m"
-        )
-        sys.stdout.write(f"\033[{len(choices)}A")
-        sys.stdout.flush()
-
-    print()
-    print(f"  {prompt}")
-    print()
-    for i, choice in enumerate(choices):
-        marker = "\033[36m>\033[0m " if i == 0 else "  "
-        print(f"  {marker}{choice}")
-    print(
-        "  \033[90m[\u2191\u2193 navigate   \033[36mEnter\033[0m\033[90m confirm\033[0m"
-    )
-
+    print(prompt)
+    for i, choice in enumerate(choices, 1):
+        print(f"  {i}) {choice}")
     while True:
         try:
-            key = _read_key()
-            if key == "up":
-                selected[0] = (selected[0] - 1) % len(choices)
-                render()
-            elif key == "down":
-                selected[0] = (selected[0] + 1) % len(choices)
-                render()
-            elif key == "enter":
-                print()
-                return selected[0]
+            val = int(input(f"\nSelect an option (1-{len(choices)}): "))
+            if 1 <= val <= len(choices):
+                return val - 1
+            print("  Invalid choice. Try again.")
+        except ValueError:
+            print("  Please enter a number.")
         except KeyboardInterrupt:
             print("\n\nSetup cancelled.")
             sys.exit(1)
