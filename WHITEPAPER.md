@@ -562,7 +562,13 @@ OpenWeruh **does not modify OpenClaw's core** in any way. All integrations use e
 
 ### 6.1 Webhook (`/hooks/agent`)
 
-OpenClaw provides an HTTP webhook endpoint that can be called by an external process. This is the main bridge between the daemon and the agent. The endpoint supports `sessionKey` for persistent sessions, so each screen observation builds continuous context in the `hook:weruh:screen` session.
+OpenClaw provides an HTTP webhook endpoint that can be called by an external process. This is the main bridge between the daemon and the agent. The endpoint supports `sessionKey` for persistent sessions, so each screen observation builds continuous context in the `hook:weruh:text` session.
+
+**Important — `wakeMode` behavior:**
+- By default (no `wakeMode` or `wakeMode: idle`), screen capture is **added to session context** — agent reads it when human sends a message. No new agent run is triggered.
+- `wakeMode: now` triggers a **new agent run** every time a capture is sent. This can flood the queue if captures are frequent (e.g., every 15s). Only use `wakeMode: now` if you want the agent to react immediately to every screen change.
+
+OpenWeruh uses the default `wakeMode` (idle) so captures are accumulated as context — the agent responds naturally when the human inputs a message.
 
 Official documentation: `docs.openclaw.ai/automation/webhook`
 
