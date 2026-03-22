@@ -238,10 +238,10 @@ python daemon/weruh.py setup
 
 **Setup will:**
 1. Ask gateway location (local or remote server)
-2. Test gateway connection and send install commands to OpenClaw agent
-3. Display install commands in terminal — paste them to OpenClaw (web UI / Telegram) to ensure execution
-4. Show OpenClaw configuration notes (edit `openclaw.json` where OpenClaw runs)
-5. Configure Gateway URL and hook token
+2. Ask for Gateway URL and hook token
+3. Show `openclaw config set` commands — paste them to OpenClaw (web UI / Telegram) to enable the webhook
+4. Test gateway connection
+5. Send install commands to OpenClaw agent + display in terminal
 6. Choose screen analysis mode (OCR, Vision API, or direct image)
 7. Save and summarize
 

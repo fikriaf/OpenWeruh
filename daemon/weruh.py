@@ -243,6 +243,36 @@ def _show_install_commands():
     input()
 
 
+def _show_openclaw_setup_commands(token: str):
+    print()
+    print("  \033[36m────────────────────────────────────────────\033[0m")
+    print(
+        "  \033[1m  Configure OpenClaw First\033[0m  \033[90m(run where OpenClaw runs)\033[0m"
+    )
+    print("  \033[36m────────────────────────────────────────────\033[0m")
+    print()
+    print(
+        "  \033[33m!\033[0m  Paste the commands below into OpenClaw (web UI / Telegram)"
+    )
+    print(
+        "  \033[90m  BEFORE continuing. This enables the webhook that OpenWeruh needs.\033[0m"
+    )
+    print()
+    print("  \033[32mRun in OpenClaw terminal (web UI / CLI):\033[0m")
+    print()
+    print("  \033[36mopenclaw config set hooks.enabled true\033[0m")
+    print(f'  \033[36mopenclaw config set hooks.token "{token}"\033[0m')
+    print("  \033[36mopenclaw config set hooks.allowRequestSessionKey true\033[0m")
+    print()
+    print(
+        "  \033[90m  After running the commands above, press Enter to continue.\033[0m"
+    )
+    print("  \033[90m  Or restart OpenClaw gateway first if needed.\033[0m")
+    print()
+    print("  \033[90m[Press Enter after configuring OpenClaw...]\033[0m")
+    input()
+
+
 def _show_openclaw_notes():
     print()
     print("  \033[36m────────────────────────────────────────────\033[0m")
@@ -332,7 +362,7 @@ def run_setup():
         "gateway": {"mode": gw_mode, "url": gw_url, "hook_token": gw_token}
     }
 
-    _show_openclaw_notes()
+    _show_openclaw_setup_commands(gw_token)
 
     config = {
         "gateway": preflight_config["gateway"],

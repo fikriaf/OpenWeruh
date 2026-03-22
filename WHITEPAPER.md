@@ -899,7 +899,7 @@ For security, `gateway.remote.token` is only used as a last resort when no expli
 
 ### Interactive Installer
 
-The OpenWeruh installer sends install commands directly to the OpenClaw agent via webhook — no special local vs. remote distinction:
+The OpenWeruh installer guides through a clear sequence: configure OpenClaw webhook first, then connect:
 
 ```bash
 $ python daemon/weruh.py setup
@@ -912,9 +912,30 @@ OpenWeruh Setup
     On a remote server (public URL / Tailscale)
 
 ? Gateway URL: https://openclaw.tail1234.ts.net
-? Hook token (from openclaw.json → hooks.token): ****
+? Hook token: ********
+
+┌─ Configure OpenClaw First (run where OpenClaw runs) ─────────────────────────┐
+! Paste the commands below into OpenClaw (web UI / Telegram)
+  BEFORE continuing. This enables the webhook that OpenWeruh needs.
+
+Run in OpenClaw terminal (web UI / CLI):
+  openclaw config set hooks.enabled true
+  openclaw config set hooks.token "YOUR_TOKEN"
+  openclaw config set hooks.allowRequestSessionKey true
+
+  [Press Enter after configuring OpenClaw...]
 
 ✓ Gateway connection successful
+
+┌─ OpenClaw Component Installation ──────────────────────────────────────────────┐
+! The commands below have been sent to OpenClaw agent.
+  Also paste them manually into OpenClaw (web UI / Telegram)...
+
+  1. git clone https://github.com/fikriaf/OpenWeruh.git
+  2. npx clawhub install openweruh --no-input
+  3. openclaw hooks install OpenWeruh/hook/weruh-boot
+
+  [Press Enter to continue...]
 
 ┌─ Screen Analysis ──────────────────────────────────────────────────┐
 ? How should screen content be analyzed?
@@ -922,20 +943,14 @@ OpenWeruh Setup
     Text-Only Mode: OCR (no LLM needed)
     Text-Only Mode: Vision API
 
-✓ Install triggered (agent will execute commands)
+  Gateway URL:   https://openclaw.tail1234.ts.net
+  Gateway mode:  Remote
+  Analysis:      OpenClaw image
+  Fallback:      None
+
+  Save this configuration?
 OpenWeruh is ready. Run: python daemon/weruh.py start
 ```
-
-**Install flow:**  
-The installer sends install instructions via the OpenClaw webhook to the agent session. The OpenClaw agent receives the message and executes the install commands via its `exec` tool:
-
-```bash
-git clone https://github.com/fikriaf/OpenWeruh.git
-npx clawhub install openweruh --no-input
-openclaw hooks install OpenWeruh/hook/weruh-boot
-```
-
-This means OpenWeruh components are installed **by OpenClaw itself** — no SSH, no manual file transfer needed.
 
 ---
 
