@@ -210,12 +210,14 @@ def _show_openclaw_notes():
     print("  \033[36m────────────────────────────────────────────\033[0m")
     print()
     print("  \033[33m?\033[0m  Telegram not reaching you?")
-    print("     OpenClaw WebUI \u2192 Channels \u2192 Telegram \u2192")
-    print("       Allow From \u2192 add *")
-    print("       DM Policy \u2192 set open")
+    print("     Copy-paste to OpenClaw chat:")
+    print(
+        "     \033[32mset telegram dmPolicy to open and allowFrom to allow all\033[0m"
+    )
     print()
     print("  \033[33m?\033[0m  See \033[91m'unknown entries (image)'\033[0m error?")
-    print("     \033[32mopenclaw config set tools.profile minimal\033[0m")
+    print("     Copy-paste to OpenClaw chat:")
+    print("     \033[32mset tools.profile to minimal\033[0m")
     print()
     print("  \033[90m[Press Enter to continue with OpenWeruh setup...]\033[0m")
     input()
